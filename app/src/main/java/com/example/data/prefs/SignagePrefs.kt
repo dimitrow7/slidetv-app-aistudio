@@ -16,11 +16,6 @@ class SignagePrefs(context: Context) {
         private const val KEY_WAKE_HOUR = "wake_hour"
         private const val KEY_WAKE_MINUTE = "wake_minute"
         private const val DEFAULT_SERVER_URL = "https://app.slidetv.eu/player"
-        private const val KEY_DEVICE_TOKEN = "device_token"
-        private const val KEY_LAST_SLEEP_CMD = "last_sleep_command_at"
-        private const val KEY_LAST_WAKE_CMD = "last_wake_command_at"
-        private const val KEY_LAST_RELOAD_CMD = "last_reload_command_at"
-        private const val KEY_LAST_CLEAR_CACHE_CMD = "last_clear_cache_command_at"
     }
 
     var serverUrl: String
@@ -58,32 +53,5 @@ class SignagePrefs(context: Context) {
     var wakeMinute: Int
         get() = prefs.getInt(KEY_WAKE_MINUTE, 0)
         set(value) = prefs.edit().putInt(KEY_WAKE_MINUTE, value).apply()
-
-    var deviceToken: String
-        get() = prefs.getString(KEY_DEVICE_TOKEN, "") ?: ""
-        set(value) = prefs.edit().putString(KEY_DEVICE_TOKEN, value).apply()
-
-    var lastSleepCommandAt: Long
-        get() = prefs.getLong(KEY_LAST_SLEEP_CMD, 0L)
-        set(value) = prefs.edit().putLong(KEY_LAST_SLEEP_CMD, value).apply()
-
-    var lastWakeCommandAt: Long
-        get() = prefs.getLong(KEY_LAST_WAKE_CMD, 0L)
-        set(value) = prefs.edit().putLong(KEY_LAST_WAKE_CMD, value).apply()
-
-    var lastReloadCommandAt: Long
-        get() = prefs.getLong(KEY_LAST_RELOAD_CMD, 0L)
-        set(value) = prefs.edit().putLong(KEY_LAST_RELOAD_CMD, value).apply()
-
-    var lastClearCacheCommandAt: Long
-        get() = prefs.getLong(KEY_LAST_CLEAR_CACHE_CMD, 0L)
-        set(value) = prefs.edit().putLong(KEY_LAST_CLEAR_CACHE_CMD, value).apply()
-
-    // Derives API base URL from serverUrl (e.g. "https://app.slidetv.eu/player" → "https://app.slidetv.eu")
-    val apiBaseUrl: String
-        get() {
-            val parsed = android.net.Uri.parse(serverUrl)
-            return "${parsed.scheme}://${parsed.host}"
-        }
 }
 
