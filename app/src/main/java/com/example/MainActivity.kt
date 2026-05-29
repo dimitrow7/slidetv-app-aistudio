@@ -19,6 +19,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -48,6 +51,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.DialogProperties
 import com.example.api.DeviceApiClient
@@ -94,6 +98,7 @@ class MainActivity : ComponentActivity() {
         // Prevent screen dimming and keep device screen on permanently
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         enableEdgeToEdge()
+        hideSystemBars()
 
         setContent {
             MyApplicationTheme {
@@ -466,6 +471,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideSystemBars()
+        }
+    }
+
+    private fun hideSystemBars() {
+        try {
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            val controller = WindowCompat.getInsetsController(window, window.decorView)
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Failed to hide system bars: ${e.message}")
+        }
+    }
+
     private fun injectWatchdogHeartbeatScript(view: WebView?) {
         val script = """
             (function() {
@@ -555,6 +578,11 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handleScheduleIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        hideSystemBars()
     }
 
     private fun handleScheduleIntent(intent: Intent?) {
@@ -650,24 +678,18 @@ fun SlideTVLogo(modifier: Modifier = Modifier) {
 
 @Composable
 fun SlideTVBrandingHeader(modifier: Modifier = Modifier) {
-    Row(
-        modifier = modifier.wrapContentSize(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(55.dp)
+            .padding(vertical = 4.dp),
+        contentAlignment = Alignment.Center
     ) {
-        SlideTVLogo()
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = "Slide",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color.White
-        )
-        Text(
-            text = "TV",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF00D2FF)
+        Image(
+            painter = painterResource(id = R.drawable.slidetv_app_logo_white),
+            contentDescription = "SlideTV Logo",
+            modifier = Modifier.fillMaxHeight(),
+            contentScale = ContentScale.Fit
         )
     }
 }
@@ -1294,10 +1316,14 @@ private fun launchDrawOverlaysSettings(context: android.content.Context) {
 }
 
 private fun canScheduleExactAlarms(context: android.content.Context): Boolean {
-    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-        val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
-        am.canScheduleExactAlarms()
-    } else {
+    return try {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+            am.canScheduleExactAlarms()
+        } else {
+            true
+        }
+    } catch (e: Exception) {
         true
     }
 }

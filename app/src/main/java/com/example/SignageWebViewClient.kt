@@ -64,14 +64,6 @@ class SignageWebViewClient(
         onPageFinishedCallback(view, url)
     }
 
-    override fun onRenderProcessGone(view: WebView?, detail: android.webkit.RenderProcessGoneDetail?): Boolean {
-        Log.e("SignageWebViewClient", "WebView render process gone! Reloading WebView content...")
-        view?.post {
-            view.reload()
-        }
-        return true
-    }
-
     override fun shouldInterceptRequest(
         view: WebView,
         request: WebResourceRequest
