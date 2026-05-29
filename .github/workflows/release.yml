@@ -32,7 +32,6 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Decode Keystore
-        if: env.KEYSTORE_BASE64 != ''
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
