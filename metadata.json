@@ -1,5 +1,5 @@
 {
-  "name": "Digital Signage Player",
+  "name": "SlideTV Player",
   "description": "A high-performance offline-first digital signage player for TVs and tablets with local media caching and boot auto-start.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

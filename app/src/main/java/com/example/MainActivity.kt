@@ -33,6 +33,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Info
 import com.example.data.prefs.SignagePrefs
 import com.example.ui.theme.MyApplicationTheme
 import androidx.compose.foundation.Canvas
@@ -588,6 +592,7 @@ fun SettingsDialog(
     var localWakeMinute by remember { mutableStateOf(wakeMinute) }
     var localAutostartEnabled by remember { mutableStateOf(prefs.isAutostartEnabled) }
     var localWatchdogEnabled by remember { mutableStateOf(prefs.isWatchdogEnabled) }
+    var selectedTabIndex by remember { mutableStateOf(0) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -614,193 +619,333 @@ fun SettingsDialog(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
                     .padding(vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // First Run Hint / Helper Banner
-                if (prefs.isFirstLaunch) {
-                    Card(
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF00D2FF).copy(alpha = 0.1f)
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00D2FF)),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 4.dp)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Text(
-                                text = "Добре дошли в SlideTV! 🚀",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF00D2FF)
+                TabRow(
+                    selectedTabIndex = selectedTabIndex,
+                    containerColor = Color(0xFF151525),
+                    contentColor = Color.White,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                ) {
+                    Tab(
+                        selected = selectedTabIndex == 0,
+                        onClick = { selectedTabIndex = 0 },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Системни",
+                                tint = if (selectedTabIndex == 0) Color(0xFF00D2FF) else Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(20.dp)
                             )
+                        },
+                        text = {
                             Text(
-                                text = "Това устройство се настройва за първи път. Моля изберете дали желаете приложението да стартира автоматично при включване на уреда (Автоматичен старт) или ръчно. Когато приключите, натиснете розовия бутон 'Запази и затвори' долу.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = Color.White.copy(alpha = 0.9f)
+                                text = "Системни",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selectedTabIndex == 0) Color(0xFF00D2FF) else Color.White.copy(alpha = 0.6f)
                             )
                         }
-                    }
-                }
-
-                // Info block
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                    shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = "Версия на приложението: $versionInfo",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Локален медиен кеш: $cacheInfo",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "Адрес на плеъра: ${prefs.serverUrl}",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF00D2FF)
-                        )
-                    }
-                }
-
-                // Autostart Option
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(
-                            text = "Автоматичен старт",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Пуска плеъра автоматично след зареждане на устройството.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = localAutostartEnabled,
-                        onCheckedChange = { localAutostartEnabled = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFFE300A2),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        )
+                    )
+                    Tab(
+                        selected = selectedTabIndex == 1,
+                        onClick = { selectedTabIndex = 1 },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = "График",
+                                tint = if (selectedTabIndex == 1) Color(0xFFE300A2) else Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = "График",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selectedTabIndex == 1) Color(0xFFE300A2) else Color.White.copy(alpha = 0.6f)
+                            )
+                        }
+                    )
+                    Tab(
+                        selected = selectedTabIndex == 2,
+                        onClick = { selectedTabIndex = 2 },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = "Информация",
+                                tint = if (selectedTabIndex == 2) Color(0xFF00D2FF) else Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        },
+                        text = {
+                            Text(
+                                text = "Информация",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (selectedTabIndex == 2) Color(0xFF00D2FF) else Color.White.copy(alpha = 0.6f)
+                            )
+                        }
                     )
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                // Watchdog Option
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 400.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(
-                            text = "Watchdog против замръзване",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Следи дали картината е забила (чрез JS heartbeat) и автоматично я презарежда.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = localWatchdogEnabled,
-                        onCheckedChange = { localWatchdogEnabled = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFFE300A2),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        )
-                    )
-                }
-
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                // Sleep / Wake Schedule Option
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(
-                            text = "График сън / събуждане",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "Спира плеъра и затъмнява екрана в определен период за пестене на енергия.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Switch(
-                        checked = localIsScheduleEnabled,
-                        onCheckedChange = { localIsScheduleEnabled = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = Color(0xFFE300A2),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.DarkGray
-                        )
-                    )
-                }
-
-                if (localIsScheduleEnabled) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        TimeAdjustmentRow(
-                            label = "Заспиване в:",
-                            hour = localSleepHour,
-                            minute = localSleepMinute,
-                            onHourChange = {
-                                localSleepHour = (it + 24) % 24
-                            },
-                            onMinuteChange = {
-                                localSleepMinute = (it + 60) % 60
+                    when (selectedTabIndex) {
+                        0 -> {
+                            // First Run Hint / Helper Banner
+                            if (prefs.isFirstLaunch) {
+                                Card(
+                                    colors = CardDefaults.cardColors(
+                                        containerColor = Color(0xFF00D2FF).copy(alpha = 0.1f)
+                                    ),
+                                    border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF00D2FF)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 4.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = "Добре дошли в SlideTV!",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF00D2FF)
+                                        )
+                                        Text(
+                                            text = "Това устройство се настройва за първи път. Моля изберете дали желаете приложението да стартира автоматично при включване на уреда (Автоматичен старт) или ръчно. Когато приключите, натиснете розовия бутон 'Запази и затвори' долу.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = Color.White.copy(alpha = 0.9f)
+                                        )
+                                    }
+                                }
                             }
-                        )
 
-                        TimeAdjustmentRow(
-                            label = "Събуждане в:",
-                            hour = localWakeHour,
-                            minute = localWakeMinute,
-                            onHourChange = {
-                                localWakeHour = (it + 24) % 24
-                            },
-                            onMinuteChange = {
-                                localWakeMinute = (it + 60) % 60
+                            // Autostart Option
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                    Text(
+                                        text = "Автоматичен старт",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Пуска плеъра автоматично след зареждане на устройството.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = localAutostartEnabled,
+                                    onCheckedChange = { localAutostartEnabled = it },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFFE300A2),
+                                        uncheckedThumbColor = Color.Gray,
+                                        uncheckedTrackColor = Color.DarkGray
+                                    )
+                                )
                             }
-                        )
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                            // Watchdog Option
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                    Text(
+                                        text = "Watchdog против замръзване",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Следи дали картината е забила (чрез JS heartbeat) и автоматично я презарежда.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = localWatchdogEnabled,
+                                    onCheckedChange = { localWatchdogEnabled = it },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFFE300A2),
+                                        uncheckedThumbColor = Color.Gray,
+                                        uncheckedTrackColor = Color.DarkGray
+                                    )
+                                )
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                            // Show diagnostics inside Systems tab permanently
+                            KioskDiagnosticsSection(context = context)
+                        }
+                        1 -> {
+                            // Sleep / Wake Schedule Option
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                                    Text(
+                                        text = "График сън / събуждане",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Спира плеъра и затъмнява екрана в определен период за пестене на енергия.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Switch(
+                                    checked = localIsScheduleEnabled,
+                                    onCheckedChange = { localIsScheduleEnabled = it },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = Color.White,
+                                        checkedTrackColor = Color(0xFFE300A2),
+                                        uncheckedThumbColor = Color.Gray,
+                                        uncheckedTrackColor = Color.DarkGray
+                                    )
+                                )
+                            }
+
+                            if (localIsScheduleEnabled) {
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    TimeAdjustmentRow(
+                                        label = "Заспиване в:",
+                                        hour = localSleepHour,
+                                        minute = localSleepMinute,
+                                        onHourChange = {
+                                            localSleepHour = (it + 24) % 24
+                                        },
+                                        onMinuteChange = {
+                                            localSleepMinute = (it + 60) % 60
+                                        }
+                                    )
+
+                                    TimeAdjustmentRow(
+                                        label = "Събуждане в:",
+                                        hour = localWakeHour,
+                                        minute = localWakeMinute,
+                                        onHourChange = {
+                                            localWakeHour = (it + 24) % 24
+                                        },
+                                        onMinuteChange = {
+                                            localWakeMinute = (it + 60) % 60
+                                        }
+                                    )
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                                        .padding(14.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Графикът е деактивиран. Включете суича по-горе, за да настроите часовете за сън и събуждане.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.6f),
+                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                        2 -> {
+                            // Info block
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = "Версия на приложението: $versionInfo",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = "Локален медиен кеш: $cacheInfo",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    Text(
+                                        text = "Адрес на плеъра: ${prefs.serverUrl}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF00D2FF)
+                                    )
+                                }
+                            }
+
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0x1100D2FF)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF00D2FF).copy(alpha = 0.3f)),
+                                shape = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text(
+                                        text = "Бързи инструкции",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF00D2FF)
+                                    )
+                                    Text(
+                                        text = "• За да отворите този панел отново, натиснете бързо 5 пъти бутона OK на дистанционното управление в рамките на 2.5 секунди.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 11.sp,
+                                        color = Color.White.copy(alpha = 0.8f)
+                                    )
+                                    Text(
+                                        text = "• Изчистването на кеша ще премахне всички временни файлове и ще принуди плеъра да ги свали отново при следващо зареждане.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 11.sp,
+                                        color = Color.White.copy(alpha = 0.8f)
+                                    )
+                                    Text(
+                                        text = "• За най-добра стабилност се уверете, че системният часовник на Вашето устройство е сверен правилно.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontSize = 11.sp,
+                                        color = Color.White.copy(alpha = 0.8f)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -814,7 +959,56 @@ fun SettingsDialog(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 1. Запази
+                // Now ordered mirrorwise (right-most are active/primary, left-most are utility/destructive)
+
+                // 1. Разкачи у-во
+                Button(
+                    onClick = onDisconnectDevice,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0x33FF0033),
+                        contentColor = Color(0xFFFF4D4D)
+                    )
+                ) {
+                    Text("Разкачи у-во")
+                }
+
+                // 2. Изчисти кеша
+                Button(
+                    onClick = onClearCache,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0x3300D2FF),
+                        contentColor = Color(0xFF00D2FF)
+                    )
+                ) {
+                    Text("Изчисти кеша")
+                }
+
+                // 3. Презареди страницата
+                Button(
+                    onClick = onReload,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF00D2FF),
+                        contentColor = Color(0xFF0D0D19)
+                    )
+                ) {
+                    Text("Презареди страницата")
+                }
+
+                // 4. Отказ
+                Button(
+                    onClick = {
+                        prefs.isFirstLaunch = false
+                        onDismiss()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0x22FFFFFF),
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text("Отказ")
+                }
+
+                // 5. Запази
                 Button(
                     onClick = {
                         // Clear first-run layout now that user completed settings check
@@ -857,53 +1051,6 @@ fun SettingsDialog(
                     )
                 ) {
                     Text("Запази", fontWeight = FontWeight.Bold)
-                }
-
-                // 2. Отказ
-                Button(
-                    onClick = {
-                        prefs.isFirstLaunch = false
-                        onDismiss()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0x22FFFFFF),
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text("Отказ")
-                }
-
-                // 3. Изчисти кеша
-                Button(
-                    onClick = onClearCache,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0x3300D2FF),
-                        contentColor = Color(0xFF00D2FF)
-                    )
-                ) {
-                    Text("Изчисти кеша")
-                }
-
-                // 4. Разкачи у-во
-                Button(
-                    onClick = onDisconnectDevice,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0x33FF0033),
-                        contentColor = Color(0xFFFF4D4D)
-                    )
-                ) {
-                    Text("Разкачи у-во")
-                }
-
-                // 5. Презареди страницата
-                Button(
-                    onClick = onReload,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF00D2FF),
-                        contentColor = Color(0xFF0D0D19)
-                    )
-                ) {
-                    Text("Презареди страницата")
                 }
             }
         }
@@ -980,3 +1127,309 @@ fun TimeAdjustmentRow(
         }
     }
 }
+
+// Checkers and Launchers for Android permissions that are critical for long-term tablet sleep/wake stability (Lenovo, Samsung, etc.)
+private fun isIgnoringBatteryOptimizations(context: android.content.Context): Boolean {
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        val pm = context.getSystemService(android.content.Context.POWER_SERVICE) as android.os.PowerManager
+        pm.isIgnoringBatteryOptimizations(context.packageName)
+    } else {
+        true
+    }
+}
+
+private fun launchBatteryOptimizationSettings(context: android.content.Context) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        try {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Failed to open battery settings", e)
+        }
+    }
+}
+
+private fun canDrawOverlays(context: android.content.Context): Boolean {
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        android.provider.Settings.canDrawOverlays(context)
+    } else {
+        true
+    }
+}
+
+private fun launchDrawOverlaysSettings(context: android.content.Context) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+        try {
+            val intent = android.content.Intent(
+                android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                android.net.Uri.parse("package:${context.packageName}")
+            ).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val intent = android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (ex: Exception) {
+                android.util.Log.e("MainActivity", "Failed to open overlay settings", ex)
+            }
+        }
+    }
+}
+
+private fun canScheduleExactAlarms(context: android.content.Context): Boolean {
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        val am = context.getSystemService(android.content.Context.ALARM_SERVICE) as android.app.AlarmManager
+        am.canScheduleExactAlarms()
+    } else {
+        true
+    }
+}
+
+private fun launchExactAlarmSettings(context: android.content.Context) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        try {
+            val intent = android.content.Intent(
+                "android.settings.REQUEST_SCHEDULE_EXACT_ALARM",
+                android.net.Uri.parse("package:${context.packageName}")
+            ).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val intent = android.content.Intent("android.settings.REQUEST_SCHEDULE_EXACT_ALARM").apply {
+                    addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(intent)
+            } catch (ex: Exception) {
+                android.util.Log.e("MainActivity", "Failed to open exact alarm settings", ex)
+            }
+        }
+    }
+}
+
+private fun launchAppInfoSettings(context: android.content.Context) {
+    try {
+        val intent = android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = android.net.Uri.parse("package:${context.packageName}")
+            addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        android.util.Log.e("MainActivity", "Failed to open App Info screen", e)
+    }
+}
+
+private fun launchAutoStartSettings(context: android.content.Context) {
+    val intents = listOf(
+        // Lenovo Pure Background settings
+        android.content.Intent().setComponent(android.content.ComponentName("com.lenovo.security", "com.lenovo.security.purebackground.PureBackgroundActivity")),
+        android.content.Intent().setComponent(android.content.ComponentName("com.lenovo.powermanager", "com.lenovo.powermanager.PowerManagerActivity")),
+        android.content.Intent().setComponent(android.content.ComponentName("com.lenovo.security", "com.lenovo.security.MainActivity")),
+        // Samsung smart manager / battery restrictions
+        android.content.Intent().setComponent(android.content.ComponentName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")),
+        android.content.Intent().setComponent(android.content.ComponentName("com.samsung.android.sm_cn", "com.samsung.android.sm.ui.ram.RamActivity")),
+        android.content.Intent().setComponent(android.content.ComponentName("com.samsung.android.sm", "com.samsung.android.sm.usergoal.ActiveApplicationFilterActivity")),
+        android.content.Intent().setComponent(android.content.ComponentName("com.samsung.android.sm", "com.samsung.android.sm.ui.PresenterActivity")),
+        // Xiaomi MIUI Autostart settings
+        android.content.Intent().setComponent(android.content.ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+        // Huawei Protected apps settings
+        android.content.Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")),
+        android.content.Intent().setComponent(android.content.ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")),
+        // Oppo Autostart settings
+        android.content.Intent().setComponent(android.content.ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")),
+        // Vivo Autostart settings
+        android.content.Intent().setComponent(android.content.ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity"))
+    )
+
+    for (intent in intents) {
+        try {
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            android.util.Log.d("MainActivity", "Successfully launched manufacturer settings: ${intent.component?.className}")
+            return
+        } catch (e: Exception) {
+            // Silence and try next component layout
+        }
+    }
+
+    // Direct fallback to central App Details screen where all permissions & battery settings are stored
+    launchAppInfoSettings(context)
+}
+
+@Composable
+fun KioskDiagnosticsSection(context: android.content.Context) {
+    var hasBatteryIgnore by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
+    var hasOverlayPermission by remember { mutableStateOf(canDrawOverlays(context)) }
+    var hasExactAlarmPermission by remember { mutableStateOf(canScheduleExactAlarms(context)) }
+
+    val manufacturerRaw = android.os.Build.MANUFACTURER ?: ""
+    val manufacturer = manufacturerRaw.split(' ')
+        .filter { it.isNotEmpty() }
+        .joinToString(" ") { word -> word.lowercase().replaceFirstChar { it.uppercase() } }
+    val deviceBrand = if (manufacturer.equals("Unknown", ignoreCase = true) || manufacturer.isEmpty()) "" else " $manufacturer"
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            hasBatteryIgnore = isIgnoringBatteryOptimizations(context)
+            hasOverlayPermission = canDrawOverlays(context)
+            hasExactAlarmPermission = canScheduleExactAlarms(context)
+            kotlinx.coroutines.delay(2000)
+        }
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = Color(0xFF1E1E2E)
+        ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE300A2).copy(alpha = 0.4f)),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "Системна алармена диагностика за устройството",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF00D2FF)
+                )
+            }
+            Text(
+                text = "За да задействате събуждането и съня безупречно на Вашето устройство$deviceBrand, моля осигурете следните права:",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.8f)
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            // Battery ignore optimization
+            DiagnosticRow(
+                title = "Работа без ограничение на батерията [Doze]",
+                description = "Предпазва приложението от заспиване през нощта.",
+                isGranted = hasBatteryIgnore,
+                onClick = { launchBatteryOptimizationSettings(context) }
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            // Play over other apps overlay
+            DiagnosticRow(
+                title = "Показване над други приложения [Overlay]",
+                description = "Позволява на алармата да активира екрана от фонов режим безпрепятствено.",
+                isGranted = hasOverlayPermission,
+                onClick = { launchDrawOverlaysSettings(context) }
+            )
+
+            HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                // Exact alarm permission
+                DiagnosticRow(
+                    title = "Разрешение за точни системни аларми",
+                    description = "Позволява на устройството да задейства събитията точно в минутата.",
+                    isGranted = hasExactAlarmPermission,
+                    onClick = { launchExactAlarmSettings(context) }
+                )
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            } else {
+                Text(
+                    text = "* Разрешението за точни системни аларми не се изисква и автоматично не се показва, защото Вашето устройство работи с по-стара версия Android (под Android 12).",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
+                    color = Color.White.copy(alpha = 0.5f)
+                )
+                HorizontalDivider(color = Color.White.copy(alpha = 0.1f))
+            }
+
+            // Background Auto-Start optimization
+            DiagnosticRow(
+                title = "Фонова автономия и стартиране",
+                description = "След натискане на бутона, в настройките изберете 'Батерия' -> 'Без ограничения' (Unrestricted). Разрешете също автостарт, ако има такава опция.",
+                isGranted = false,
+                buttonTextOverride = "Отвори",
+                onClick = { launchAutoStartSettings(context) }
+            )
+            
+            // Failsafe note
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFE300A2).copy(alpha = 0.15f), RoundedCornerShape(6.dp))
+                    .padding(8.dp)
+            ) {
+                Text(
+                    text = "СЪВЕТ: За 100% стабилност е силно препоръчително устройството да остане постоянно свързано към зарядно устройство.",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFFF99D6)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DiagnosticRow(
+    title: String,
+    description: String,
+    isGranted: Boolean,
+    buttonTextOverride: String? = null,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+        }
+        
+        Button(
+            onClick = onClick,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (buttonTextOverride != null) Color(0xFF00D2FF) else (if (isGranted) Color(0xFF2E7D32) else Color(0xFFC62828)),
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            modifier = Modifier.height(34.dp)
+        ) {
+            Text(
+                text = buttonTextOverride ?: (if (isGranted) "Разрешено" else "Разреши тук"),
+                style = MaterialTheme.typography.bodySmall,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
