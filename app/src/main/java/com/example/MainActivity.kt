@@ -50,8 +50,12 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.window.DialogProperties
+import com.example.api.DeviceApiClient
+import com.example.api.PollRequestBody
 import java.io.File
 import java.util.concurrent.atomic.AtomicLong
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
     private lateinit var prefs: SignagePrefs
@@ -284,6 +288,113 @@ class MainActivity : ComponentActivity() {
                                 }
                             }
                     )
+
+                    // Remote device polling — init device token then poll every 30 seconds
+                    LaunchedEffect(Unit) {
+                        val api = DeviceApiClient.getService(prefs.apiBaseUrl)
+
+                        // Init: register new device or confirm existing token
+                        try {
+                            val initResp = withContext(Dispatchers.IO) {
+                                api.init(prefs.deviceToken.ifEmpty { null })
+                            }
+                            if (!initResp.deviceToken.isNullOrEmpty()) {
+                                prefs.deviceToken = initResp.deviceToken
+                                Log.d("SlideTVPolling", "Device token saved: ${initResp.deviceToken}")
+                            }
+                        } catch (e: Exception) {
+                            Log.e("SlideTVPolling", "Init failed: ${e.message}")
+                        }
+
+                        // Polling loop
+                        while (true) {
+                            kotlinx.coroutines.delay(30_000)
+                            val token = prefs.deviceToken
+                            if (token.isEmpty()) continue
+
+                            try {
+                                val pollResp = withContext(Dispatchers.IO) {
+                                    api.poll(
+                                        token,
+                                        PollRequestBody(
+                                            appVersion = BuildConfig.VERSION_NAME,
+                                            versionCode = BuildConfig.VERSION_CODE
+                                        )
+                                    )
+                                }
+
+                                // Device was deleted from SaaS — clear token and re-init next cycle
+                                if (pollResp.status == "unpaired") {
+                                    Log.w("SlideTVPolling", "Screen unpaired from SaaS. Clearing token.")
+                                    prefs.deviceToken = ""
+                                    continue
+                                }
+
+                                // Remote sleep command
+                                if (pollResp.commandSleepAt > prefs.lastSleepCommandAt) {
+                                    isSleepingState.value = true
+                                    prefs.lastSleepCommandAt = pollResp.commandSleepAt
+                                    Log.d("SlideTVPolling", "Remote sleep command executed.")
+                                }
+
+                                // Remote wake command
+                                if (pollResp.commandWakeAt > prefs.lastWakeCommandAt) {
+                                    isSleepingState.value = false
+                                    wakeHardwareScreen()
+                                    prefs.lastWakeCommandAt = pollResp.commandWakeAt
+                                    Log.d("SlideTVPolling", "Remote wake command executed.")
+                                }
+
+                                // Remote reload command
+                                if (pollResp.commandReloadAt > prefs.lastReloadCommandAt) {
+                                    webView?.reload()
+                                    lastWatchdogPingTime.set(System.currentTimeMillis())
+                                    prefs.lastReloadCommandAt = pollResp.commandReloadAt
+                                    Log.d("SlideTVPolling", "Remote reload command executed.")
+                                }
+
+                                // Remote clear cache command
+                                if (pollResp.commandClearCacheAt > prefs.lastClearCacheCommandAt) {
+                                    webView?.clearCache(true)
+                                    try {
+                                        val cacheDir = File(context.cacheDir, "signage_media_cache")
+                                        if (cacheDir.exists()) cacheDir.deleteRecursively()
+                                        cacheDir.mkdirs()
+                                    } catch (e: Exception) { e.printStackTrace() }
+                                    webView?.reload()
+                                    lastWatchdogPingTime.set(System.currentTimeMillis())
+                                    prefs.lastClearCacheCommandAt = pollResp.commandClearCacheAt
+                                    Log.d("SlideTVPolling", "Remote clear-cache command executed.")
+                                }
+
+                                // Sync schedule from SaaS operating_hours (overrides local settings)
+                                pollResp.operatingHours?.let { oh ->
+                                    if (prefs.isScheduleEnabled != oh.enabled ||
+                                        prefs.sleepHour != oh.sleepHour ||
+                                        prefs.sleepMinute != oh.sleepMinute ||
+                                        prefs.wakeHour != oh.wakeHour ||
+                                        prefs.wakeMinute != oh.wakeMinute
+                                    ) {
+                                        prefs.isScheduleEnabled = oh.enabled
+                                        prefs.sleepHour = oh.sleepHour
+                                        prefs.sleepMinute = oh.sleepMinute
+                                        prefs.wakeHour = oh.wakeHour
+                                        prefs.wakeMinute = oh.wakeMinute
+                                        isScheduleEnabled = oh.enabled
+                                        sleepHour = oh.sleepHour
+                                        sleepMinute = oh.sleepMinute
+                                        wakeHour = oh.wakeHour
+                                        wakeMinute = oh.wakeMinute
+                                        ScheduleManager.updateAlarms(context)
+                                        Log.d("SlideTVPolling", "Schedule synced from SaaS: enabled=${oh.enabled} sleep=${oh.sleepHour}:${oh.sleepMinute} wake=${oh.wakeHour}:${oh.wakeMinute}")
+                                    }
+                                }
+
+                            } catch (e: Exception) {
+                                Log.e("SlideTVPolling", "Poll failed: ${e.message}")
+                            }
+                        }
+                    }
 
                     if (showSettings) {
                         SettingsDialog(
