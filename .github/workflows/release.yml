@@ -36,13 +36,13 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > app/keystore.jks
+          echo "$KEYSTORE_BASE64" | base64 -d > ${{ github.workspace }}/keystore.jks
 
       # VERSION_CODE = github.run_number (always increases — used for OTA comparison)
       # VERSION_NAME = tag without the 'v' prefix (e.g. "1.2.3")
       - name: Build Release APK
         env:
-          KEYSTORE_PATH: app/keystore.jks
+          KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
