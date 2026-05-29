@@ -42,6 +42,7 @@ jobs:
       - name: Build Release APK
         env:
           KEYSTORE_PATH: ${{ github.workspace }}/keystore.jks
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
