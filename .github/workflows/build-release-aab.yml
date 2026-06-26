@@ -1,7 +1,12 @@
-name: Build Release AAB (manual)
+name: Build Release AAB (Play)
 
 on:
   workflow_dispatch:
+    inputs:
+      version_name:
+        description: "Version name shown on Play (e.g. 1.0.1)"
+        required: true
+        default: "1.0.0"
 
 jobs:
   build:
@@ -35,7 +40,7 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
-          VERSION_NAME: manual
+          VERSION_NAME: ${{ github.event.inputs.version_name }}
         run: gradle bundleRelease
 
       - name: Upload AAB artifact
