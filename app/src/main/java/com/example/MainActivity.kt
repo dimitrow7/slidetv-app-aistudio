@@ -294,28 +294,25 @@ class MainActivity : ComponentActivity() {
                             }
                     )
 
-                    // Remote device polling — init device token then poll every 30 seconds
+                    // Remote device polling — reuse the embedded web player's identity.
+                    // The web player (loaded in the WebView) pairs the screen and stores its
+                    // device token as the `slidetv_device_token` cookie. We reuse THAT token so
+                    // the native shell polls the SAME screen the player is paired to. Calling
+                    // /api/device/init here instead would create a SEPARATE, unpaired screen
+                    // that never receives the sleep/wake schedule or remote commands.
                     LaunchedEffect(Unit) {
                         val api = DeviceApiClient.getService(prefs.apiBaseUrl)
-
-                        // Init: register new device or confirm existing token
-                        try {
-                            val initResp = withContext(Dispatchers.IO) {
-                                api.init(prefs.deviceToken.ifEmpty { null })
-                            }
-                            if (!initResp.deviceToken.isNullOrEmpty()) {
-                                prefs.deviceToken = initResp.deviceToken
-                                Log.d("SlideTVPolling", "Device token saved: ${initResp.deviceToken}")
-                            }
-                        } catch (e: Exception) {
-                            Log.e("SlideTVPolling", "Init failed: ${e.message}")
-                        }
 
                         // Polling loop
                         while (true) {
                             kotlinx.coroutines.delay(30_000)
-                            val token = prefs.deviceToken
-                            if (token.isEmpty()) continue
+
+                            val token = readPlayerDeviceToken()
+                            if (token.isNullOrEmpty()) continue
+                            if (prefs.deviceToken != token) {
+                                prefs.deviceToken = token
+                                Log.d("SlideTVPolling", "Using web player device token: $token")
+                            }
 
                             try {
                                 val pollResp = withContext(Dispatchers.IO) {
@@ -594,6 +591,26 @@ class MainActivity : ComponentActivity() {
             wakeHardwareScreen()
         } else if (action == "sleep") {
             isSleepingState.value = true
+        }
+    }
+
+    /**
+     * Reads the device token the embedded web player obtained after pairing.
+     * The player (web /player page) stores it as the `slidetv_device_token` cookie.
+     * Reusing it makes the native shell and the web player a SINGLE screen identity
+     * on the SaaS, so remote schedule/commands target the screen the user actually sees.
+     */
+    private fun readPlayerDeviceToken(): String? {
+        return try {
+            val cookies = CookieManager.getInstance().getCookie(prefs.serverUrl) ?: return null
+            cookies.split(";")
+                .map { it.trim() }
+                .firstOrNull { it.startsWith("slidetv_device_token=") }
+                ?.substringAfter("=")
+                ?.takeIf { it.isNotBlank() }
+        } catch (e: Exception) {
+            Log.e("SlideTVPolling", "Failed to read player token: ${e.message}")
+            null
         }
     }
 
