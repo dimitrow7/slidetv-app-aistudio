@@ -119,6 +119,12 @@ class MainActivity : ComponentActivity() {
                 var isSleeping by isSleepingState
                 var wasSleeping by remember { mutableStateOf(false) }
 
+                // Manual Sleep/Wake command override (true = sleep, false = wake, null = none).
+                // While set, the schedule monitor will NOT auto-change the sleep state until the
+                // schedule naturally reaches the same value. Without this, a manual Wake Up during
+                // the sleep window gets reverted to sleep by the monitor within ~10 seconds.
+                var scheduleOverrideState by remember { mutableStateOf<Boolean?>(null) }
+
                 // Intercept Android Back button to show settings or let WebView go back
                 BackHandler {
                     if (webView?.canGoBack() == true) {
@@ -222,7 +228,13 @@ class MainActivity : ComponentActivity() {
                                     false
                                 }
                                 
-                                if (isSleeping != targetSleepState) {
+                                // Release a manual override once the schedule naturally agrees with it.
+                                if (scheduleOverrideState != null && targetSleepState == scheduleOverrideState) {
+                                    scheduleOverrideState = null
+                                }
+
+                                // Only auto-apply the scheduled state when no manual override is active.
+                                if (scheduleOverrideState == null && isSleeping != targetSleepState) {
                                     isSleeping = targetSleepState
                                     Log.d("SlideTVSchedule", "Schedule state updated. Is Sleeping: $targetSleepState")
                                 }
@@ -332,16 +344,21 @@ class MainActivity : ComponentActivity() {
                                     continue
                                 }
 
-                                // Remote sleep command
+                                // Remote sleep command — manual override: stay asleep until the
+                                // schedule itself reaches the sleep state.
                                 if (pollResp.commandSleepAt > prefs.lastSleepCommandAt) {
                                     isSleepingState.value = true
+                                    scheduleOverrideState = true
                                     prefs.lastSleepCommandAt = pollResp.commandSleepAt
                                     Log.d("SlideTVPolling", "Remote sleep command executed.")
                                 }
 
-                                // Remote wake command
+                                // Remote wake command — manual override: stay awake until the
+                                // schedule itself reaches the wake state (otherwise the monitor
+                                // re-sleeps the screen within ~10s during the sleep window).
                                 if (pollResp.commandWakeAt > prefs.lastWakeCommandAt) {
                                     isSleepingState.value = false
+                                    scheduleOverrideState = false
                                     wakeHardwareScreen()
                                     prefs.lastWakeCommandAt = pollResp.commandWakeAt
                                     Log.d("SlideTVPolling", "Remote wake command executed.")
