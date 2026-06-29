@@ -125,6 +125,11 @@ class MainActivity : ComponentActivity() {
                 // the sleep window gets reverted to sleep by the monitor within ~10 seconds.
                 var scheduleOverrideState by remember { mutableStateOf<Boolean?>(null) }
 
+                // Baseline guard: on the first poll of a session we adopt the server's current
+                // command timestamps without acting on them, so historical commands aren't
+                // replayed all at once right after pairing or an app restart.
+                var commandsBaselined by remember { mutableStateOf(false) }
+
                 // Intercept Android Back button to show settings or let WebView go back
                 BackHandler {
                     if (webView?.canGoBack() == true) {
@@ -342,6 +347,18 @@ class MainActivity : ComponentActivity() {
                                     Log.w("SlideTVPolling", "Screen unpaired from SaaS. Clearing token.")
                                     prefs.deviceToken = ""
                                     continue
+                                }
+
+                                // First poll of this session: adopt the server's current command
+                                // timestamps as the baseline so historical commands don't all fire
+                                // at once on (re)pair or restart (which would, e.g., set a spurious
+                                // wake override that blocks the schedule from ever sleeping).
+                                if (!commandsBaselined) {
+                                    prefs.lastSleepCommandAt = pollResp.commandSleepAt
+                                    prefs.lastWakeCommandAt = pollResp.commandWakeAt
+                                    prefs.lastReloadCommandAt = pollResp.commandReloadAt
+                                    prefs.lastClearCacheCommandAt = pollResp.commandClearCacheAt
+                                    commandsBaselined = true
                                 }
 
                                 // Remote sleep command — manual override: stay asleep until the
