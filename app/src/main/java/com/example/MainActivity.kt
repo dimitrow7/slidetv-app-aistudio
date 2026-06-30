@@ -672,7 +672,30 @@ class MainActivity : ComponentActivity() {
                     WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
                 )
             }
-            Log.d("MainActivity", "Hardware screen wake flags and WakeLock applied.")
+            // CRITICAL: bring MainActivity to the foreground. setTurnScreenOn() only powers the
+            // display as the activity is (re)resumed — so if the player had lost focus (settings,
+            // launcher, screen-off), the wake command would otherwise do nothing. launchMode is
+            // singleTask, so REORDER_TO_FRONT reuses the existing instance and fires onNewIntent.
+            try {
+                val intent = Intent(this, MainActivity::class.java).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                Log.w("MainActivity", "Wake bring-to-front failed: ${e.message}")
+            }
+
+            // Dismiss a non-secure keyguard so the player is actually visible after wake.
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                try {
+                    val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+                    km.requestDismissKeyguard(this, null)
+                } catch (e: Exception) {
+                    Log.w("MainActivity", "requestDismissKeyguard failed: ${e.message}")
+                }
+            }
+
+            Log.d("MainActivity", "Hardware screen wake: flags, foreground bring-to-front + keyguard dismiss applied.")
         } catch (e: Exception) {
             Log.e("MainActivity", "Failed to wake up hardware screen: ${e.message}", e)
         }
