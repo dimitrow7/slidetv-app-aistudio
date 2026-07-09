@@ -11,6 +11,12 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+---
+
+## [1.0.2] — versionCode 11 — built 2026-07-09, submitted to Play (pending review)
+
 ### Fixed
 - **Manual Sleep/Wake now overrides the schedule.** A manual Wake Up during the
   sleep window no longer reverts to sleep after ~10s. The manual command holds
@@ -21,14 +27,27 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
   values, so old sleep/wake/reload commands don't all fire at once. This fixed a
   case where a spurious wake command blocked the schedule from ever sleeping.
   (`6987162`)
+- **Remote wake brings the player to the foreground** and dismisses the keyguard,
+  so a wake command reliably shows content on a locked/backgrounded device.
+  (`f27d2f6`)
 
 ### Internal / CI
 - Added a `workflow_dispatch` "Build Test APK" workflow that produces a signed
   release APK artifact for `adb` testing (no GitHub release, no OTA). (`2c6e153`)
+- Added this changelog. (`af6b664`)
+
+### Store listing (not app code)
+- Screenshots reshot to satisfy the metadata policy: no third-party brands, and
+  each shot shows real app functionality (web dashboard, pairing, paired-idle,
+  a menu-board content example, and the two admin-panel tabs).
 
 ---
 
-## [1.0.1] — versionCode 10 — submitted to Play production review (pending publish)
+## [1.0.1] — versionCode 10 — **REJECTED** by Play review (never published)
+
+**Rejection reason:** Metadata policy — the store listing screenshots were
+considered unclear/generic and contained unnecessary third-party brands. The APK
+itself was not the problem; the listing was. Superseded by 1.0.2.
 
 ### Added
 - **Official Play identity:** `applicationId = eu.slidetv.player`; `versionCode` /
