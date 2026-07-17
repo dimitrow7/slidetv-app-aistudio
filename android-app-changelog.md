@@ -11,7 +11,14 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+- **Kiosk touch bridge.** The shell now forwards every native touch (and key) to the
+  web player via `window.__slidetvKioskActivity()`. Touches inside a cross-origin
+  kiosk iframe never reach the page's JS (browser security), so the WebView shell is
+  the only reliable place to detect them. This lets an interacted-with Kiosk slide
+  keep its "don't auto-advance while in use" promise — each touch resets the slide's
+  idle-grace countdown. Throttled (400 ms) so ACTION_MOVE streams don't flood
+  `evaluateJavascript`. (`MainActivity.dispatchTouchEvent` / `dispatchKeyEvent`)
 
 ---
 

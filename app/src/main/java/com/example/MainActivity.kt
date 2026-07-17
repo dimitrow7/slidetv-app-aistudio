@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.PowerManager
 import android.util.Log
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.webkit.CookieManager
@@ -70,6 +71,9 @@ class MainActivity : ComponentActivity() {
     // Remote OK key tracking for hidden menu (5 clicks within 2.5 seconds)
     private var okClickCount = 0
     private var lastOkClickTime = 0L
+
+    // Throttle for forwarding native touches to the web player's kiosk-activity hook.
+    private var lastKioskPingTime = 0L
 
     // Thread-safe atomic tracker for JS watchdog pings (crucial for JavaBridge background thread safety)
     private val lastWatchdogPingTime = AtomicLong(System.currentTimeMillis())
@@ -570,8 +574,37 @@ class MainActivity : ComponentActivity() {
         scrollBarStyle = WebView.SCROLLBARS_OUTSIDE_OVERLAY
     }
 
+    /**
+     * Forward every native touch/key to the web player's kiosk-activity hook. Touches
+     * that land INSIDE a cross-origin kiosk iframe never surface to the page's JS
+     * (browser security), so the WebView shell is the only place that reliably sees
+     * them. The player exposes `window.__slidetvKioskActivity()`; calling it on each
+     * interaction keeps an interacted-with kiosk slide from auto-advancing. Throttled
+     * so ACTION_MOVE streams don't flood evaluateJavascript.
+     */
+    private fun pingKioskActivity() {
+        val now = System.currentTimeMillis()
+        if (now - lastKioskPingTime < 400) return
+        lastKioskPingTime = now
+        val view = webView ?: return
+        view.post {
+            view.evaluateJavascript(
+                "window.__slidetvKioskActivity && window.__slidetvKioskActivity();",
+                null
+            )
+        }
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.action == MotionEvent.ACTION_DOWN || ev.action == MotionEvent.ACTION_MOVE) {
+            pingKioskActivity()
+        }
+        return super.dispatchTouchEvent(ev)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action == KeyEvent.ACTION_DOWN) {
+            pingKioskActivity()
             val keyCode = event.keyCode
             if (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || 
                 keyCode == KeyEvent.KEYCODE_ENTER || 
