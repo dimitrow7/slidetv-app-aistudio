@@ -15,7 +15,7 @@ _Nothing yet._
 
 ---
 
-## [1.0.3] — versionCode 12 — **PUBLISHED** to Play (approved)
+## [1.0.3] — versionCode 12 — released to Play production 2026-07-17 (in review/rollout)
 
 ### Added
 - **Kiosk touch bridge.** The shell now forwards every native touch (and key) to the
