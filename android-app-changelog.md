@@ -11,6 +11,12 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+---
+
+## [1.0.3] — versionCode 12 — built 2026-07-17, to be submitted to Play
+
 ### Added
 - **Kiosk touch bridge.** The shell now forwards every native touch (and key) to the
   web player via `window.__slidetvKioskActivity()`. Touches inside a cross-origin
@@ -18,11 +24,15 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
   the only reliable place to detect them. This lets an interacted-with Kiosk slide
   keep its "don't auto-advance while in use" promise — each touch resets the slide's
   idle-grace countdown. Throttled (400 ms) so ACTION_MOVE streams don't flood
-  `evaluateJavascript`. (`MainActivity.dispatchTouchEvent` / `dispatchKeyEvent`)
+  `evaluateJavascript`. Verified on-device via ADB: continuous taps froze a kiosk
+  slide's rotation (53s+ vs ~15s untouched) and rotation resumed once taps stopped.
+  (`07fd66d`)
+
+_Also carries forward the 1.0.2 fixes below (1.0.2 was never published)._
 
 ---
 
-## [1.0.2] — versionCode 11 — built 2026-07-09, submitted to Play (pending review)
+## [1.0.2] — versionCode 11 — **REJECTED** by Play (metadata/screenshots), never published
 
 ### Fixed
 - **Manual Sleep/Wake now overrides the schedule.** A manual Wake Up during the
