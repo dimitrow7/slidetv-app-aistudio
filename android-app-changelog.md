@@ -11,6 +11,12 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
+_Nothing yet._
+
+---
+
+## [1.0.4] — versionCode 13 — released to Play production 2026-07-29
+
 ### Added
 - **Media cache no longer grows without limit.** The player caches images and
   videos on disk so it keeps playing without internet, but nothing ever removed
@@ -21,9 +27,9 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
   rotation stays cached and retired media ages out. Partial downloads are never
   evicted mid-flight. A sweep runs at startup and after each new download, on a
   low-priority background thread. (`dea4c30`, `0014005`)
-- **Cache limit is a per-device setting** — 1 / 2 / 4 / 8 GB in the Системни tab
-  of the admin panel, shown next to the current cache size, so a small box can
-  be dialled down without a new build. The cache size readout now formats GB.
+- **Cache limit is a per-device setting** — 1 / 2 / 4 / 8 GB in the Кеш tab of
+  the admin panel, shown next to the current cache size, so a small box can be
+  dialled down without a new build. The cache size readout now formats GB.
   (`ca19740`)
 
 ### Changed
