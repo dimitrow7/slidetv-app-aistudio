@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -37,6 +38,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -61,13 +63,39 @@ val CACHE_LIMIT_OPTIONS = listOf(
 )
 
 // ─── Glass modifiers ─────────────────────────────────────────────────────────
+// Dark, mostly-opaque frosted fill so text stays readable over the bright
+// ambient glows behind the panel; a faint white sheen keeps the glass feel.
+private val GlassFill      = Color(0xFF14122A).copy(alpha = 0.74f)
+private val GlassFillFocus = Color(0xFF201B3D).copy(alpha = 0.82f)
+private val GlassSheen     = Color.White.copy(alpha = 0.05f)
+
 private fun Modifier.glass(focused: Boolean = false, shape: Shape = RoundedCornerShape(18.dp)): Modifier =
     this.clip(shape)
-        .background(Color.White.copy(alpha = if (focused) 0.10f else 0.045f))
+        .background(if (focused) GlassFillFocus else GlassFill)
+        .background(GlassSheen)
         .border(
-            BorderStroke(if (focused) 2.dp else 1.dp, if (focused) AccentCyan else Color.White.copy(alpha = 0.08f)),
+            BorderStroke(if (focused) 2.dp else 1.dp, if (focused) AccentCyan else Color.White.copy(alpha = 0.10f)),
             shape
         )
+
+/**
+ * A soft, feathered colour glow used for the ambient background — a radial
+ * gradient that fades to transparent (no hard circle edge), plus a real blur on
+ * Android 12+ (a graceful no-op below, where the gradient alone stays soft).
+ */
+@Composable
+private fun AmbientGlow(color: Color, size: Dp, offsetX: Dp, offsetY: Dp, alpha: Float) {
+    Box(
+        Modifier
+            .size(size)
+            .offset(x = offsetX, y = offsetY)
+            .blur(90.dp)
+            .background(
+                Brush.radialGradient(listOf(color.copy(alpha = alpha), Color.Transparent)),
+                CircleShape
+            )
+    )
+}
 
 // ─── Public entry point (same signature as before) ───────────────────────────
 @Composable
@@ -134,10 +162,9 @@ fun SettingsDialog(
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Box(Modifier.size(560.dp).offset(x = (-260).dp, y = (-160).dp)
-                .background(AccentPurple.copy(alpha = 0.20f), CircleShape))
-            Box(Modifier.size(520.dp).offset(x = 280.dp, y = 200.dp)
-                .background(AccentCyan.copy(alpha = 0.12f), CircleShape))
+            AmbientGlow(AccentPurple, 720.dp, (-320).dp, (-240).dp, 0.30f)
+            AmbientGlow(AccentCyan,   680.dp,   340.dp,   280.dp, 0.20f)
+            AmbientGlow(AccentPink,   460.dp,    40.dp,   320.dp, 0.14f)
 
             // Clamped glass panel — same physical size on phones, tablets and 4K TVs.
             Row(
@@ -162,17 +189,11 @@ fun SettingsDialog(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                     ) {
-                        Box(
-                            Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
-                                .background(AccentGradient),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        }
+                        Image(
+                            painter = painterResource(id = R.mipmap.ic_launcher),
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp))
+                        )
                         Column {
                             Text("SlideTV", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
                             Text("АДМИНИСТРАЦИЯ", color = Color.White.copy(0.5f),

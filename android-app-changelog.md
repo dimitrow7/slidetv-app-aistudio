@@ -32,7 +32,10 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
   every control for D-pad / remote navigation. Fixes the panel scaling oversized
   on TVs and the content not scrolling to the end (clamped panel + flex layout).
   The ~900-line panel was extracted from `MainActivity.kt` into its own
-  `AdminPanel.kt` (MainActivity dropped from 1738 → 742 lines).
+  `AdminPanel.kt` (MainActivity dropped from 1738 → 742 lines). Glass surfaces
+  use a dark, mostly-opaque frosted fill so text stays readable; the brand mark
+  is the bare app icon (no frame); the background is soft, blurred radial colour
+  glows instead of two hard circles.
 
 ### Internal / CI
 - Unit tests now run in CI on every push and pull request; the repo previously

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone *)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Work\\\\slidetv-webapp-ag\" -Depth 1)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Work\\\\slidetv-webapp-ag\" -Directory)",
+      "Bash(Get-ChildItem \"D:\\\\Work\\\\slidetv-webapp-ag\\\\lang\" -Recurse -Filter \"*.json\")",
+      "Bash(Select-Object FullName)",
+      "Bash(gh api *)"
+    ]
+  }
+}
