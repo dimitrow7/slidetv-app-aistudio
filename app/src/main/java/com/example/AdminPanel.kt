@@ -32,6 +32,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -189,8 +190,21 @@ fun SettingsDialog(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         modifier = Modifier.padding(start = 4.dp, bottom = 4.dp)
                     ) {
+                        // The launcher icon is an adaptive-icon (XML) which
+                        // painterResource can't load, so rasterise the real app
+                        // icon into a bitmap and show it bare (no frame).
+                        val brandIcon = remember {
+                            val d = context.packageManager.getApplicationIcon(context.packageName)
+                            val bmp = android.graphics.Bitmap.createBitmap(
+                                96, 96, android.graphics.Bitmap.Config.ARGB_8888
+                            )
+                            val canvas = android.graphics.Canvas(bmp)
+                            d.setBounds(0, 0, canvas.width, canvas.height)
+                            d.draw(canvas)
+                            bmp.asImageBitmap()
+                        }
                         Image(
-                            painter = painterResource(id = R.mipmap.ic_launcher),
+                            bitmap = brandIcon,
                             contentDescription = null,
                             modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp))
                         )
