@@ -153,6 +153,21 @@ class MediaCacheTest {
     }
 
     @Test
+    fun `touch skips the write when the stamp is already fresh`() {
+        val file = writeFile("a.mp4", 100)
+        val freshStamp = System.currentTimeMillis() - 5_000
+        file.setLastModified(freshStamp)
+
+        cache(maxBytes = 1000).touch(file)
+
+        assertEquals(
+            "a video's range requests must not rewrite the stamp on every chunk",
+            freshStamp,
+            file.lastModified()
+        )
+    }
+
+    @Test
     fun `touch on a missing file does not throw`() {
         MediaCache(dir) { 100 }.touch(File(dir, "gone.mp4"))
     }

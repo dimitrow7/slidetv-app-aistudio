@@ -11,16 +11,20 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.webkit.ServiceWorkerClient
 import android.webkit.ServiceWorkerController
+import com.example.cache.MediaCache
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 
 class SignageWebViewClient(
     private val context: Context,
     private val userAgent: String? = null,
+    private val maxCacheBytes: () -> Long = { DEFAULT_MAX_CACHE_BYTES },
     private val onPageFinishedCallback: (WebView?, String?) -> Unit = { _, _ -> }
 ) : WebViewClient() {
     private val cacheDir = File(context.cacheDir, "signage_media_cache").apply { 
@@ -37,8 +41,27 @@ class SignageWebViewClient(
         }
     }
 
+    private val mediaCache = MediaCache(cacheDir, maxCacheBytes)
+
+    /** Coalesces trim requests: a burst of downloads schedules one sweep, not one each. */
+    private val trimScheduled = AtomicBoolean(false)
+
     companion object {
+        /** 2 GB. Overridden per device from settings; see SignagePrefs.cacheLimitBytes. */
+        const val DEFAULT_MAX_CACHE_BYTES = 2L * 1024 * 1024 * 1024
+
         private val downloadLocks = ConcurrentHashMap<String, Any>()
+
+        /**
+         * Eviction walks the whole cache directory, so it stays off both the UI thread
+         * and the WebView's request threads.
+         */
+        private val cacheMaintenanceExecutor = Executors.newSingleThreadExecutor { runnable ->
+            Thread(runnable, "signage-cache-trim").apply {
+                isDaemon = true
+                priority = Thread.MIN_PRIORITY
+            }
+        }
     }
 
     init {
@@ -56,6 +79,39 @@ class SignageWebViewClient(
             } catch (e: Exception) {
                 Log.e("SignageWebViewClient", "Failed to register ServiceWorkerClient", e)
             }
+        }
+
+        // A device upgrading from a build without a cap can start out over the limit,
+        // so sweep once at startup rather than waiting for the next download.
+        scheduleTrim()
+    }
+
+    /**
+     * Requests an LRU sweep on the maintenance thread. Repeated calls while a sweep is
+     * pending collapse into that one sweep.
+     */
+    private fun scheduleTrim() {
+        if (!trimScheduled.compareAndSet(false, true)) return
+        try {
+            cacheMaintenanceExecutor.execute {
+                // Cleared first: a download finishing mid-sweep must be able to queue another.
+                trimScheduled.set(false)
+                try {
+                    val freed = mediaCache.trim()
+                    if (freed > 0) {
+                        Log.i(
+                            "SignageWebViewClient",
+                            "Cache over limit (${maxCacheBytes()} bytes): evicted $freed bytes, " +
+                                "now ${mediaCache.currentSizeBytes()} bytes"
+                        )
+                    }
+                } catch (e: Exception) {
+                    Log.e("SignageWebViewClient", "Cache trim failed", e)
+                }
+            }
+        } catch (e: Exception) {
+            trimScheduled.set(false)
+            Log.e("SignageWebViewClient", "Could not schedule cache trim", e)
         }
     }
 
@@ -163,6 +219,7 @@ class SignageWebViewClient(
         }
 
         if (cacheFile != null && cacheFile.exists()) {
+            mediaCache.touch(cacheFile)
             val extension = cacheFile.name.substringAfterLast('.', "media")
             val mimeType = getMimeType(extension)
             return serveLocalFile(cacheFile, mimeType, request)
@@ -197,6 +254,7 @@ class SignageWebViewClient(
             }
         }
         if (cacheFile != null && cacheFile.exists()) {
+            mediaCache.touch(cacheFile)
             val extension = cacheFile.name.substringAfterLast('.', "media")
             val mimeType = getMimeType(extension)
             Log.d("SignageWebViewClient", "Serving app asset [200] from cache (offline fallback): $urlString")
@@ -278,6 +336,7 @@ class SignageWebViewClient(
                     
                     if (tempFile.renameTo(finalFile)) {
                         Log.d("SignageWebViewClient", "Cached perfectly: $urlString -> Size: ${finalFile.length()} bytes, Mime: $contentType")
+                        scheduleTrim()
                         return finalFile
                     } else {
                         tempFile.delete()

@@ -24,12 +24,17 @@ class MediaCache(
     /**
      * Records [file] as just-used. Eviction orders by last-modified, so this is what
      * turns "oldest download" into "least recently used".
+     *
+     * Stamps that are already fresher than [TOUCH_THRESHOLD_MS] are left alone: a
+     * playing video issues a range request per chunk, and rewriting the stamp on each
+     * one would be pointless disk churn.
      */
     fun touch(file: File) {
         try {
-            if (file.isFile) {
-                file.setLastModified(System.currentTimeMillis())
-            }
+            if (!file.isFile) return
+            val now = System.currentTimeMillis()
+            if (now - file.lastModified() < TOUCH_THRESHOLD_MS) return
+            file.setLastModified(now)
         } catch (e: Exception) {
             // A cache stamp is best-effort; a read-only clock or FS must not break serving.
         }
@@ -78,5 +83,8 @@ class MediaCache(
 
     private companion object {
         const val TMP_SUFFIX = ".tmp"
+
+        /** Below this age a file already counts as "recently used"; skip the re-stamp. */
+        const val TOUCH_THRESHOLD_MS = 60_000L
     }
 }
