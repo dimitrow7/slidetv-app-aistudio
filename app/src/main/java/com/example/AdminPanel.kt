@@ -283,8 +283,7 @@ fun SettingsDialog(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         when (section) {
-                            0 -> SystemSection(prefs, autostart, { autostart = it }, watchdog, { watchdog = it },
-                                cacheLimit, { cacheLimit = it }, cacheInfo)
+                            0 -> SystemSection(prefs, autostart, { autostart = it }, watchdog, { watchdog = it })
                             1 -> ScheduleSection(scheduleOn, { scheduleOn = it },
                                 sHour, { sHour = (it + 24) % 24 }, sMin, { sMin = (it + 60) % 60 },
                                 wHour, { wHour = (it + 24) % 24 }, wMin, { wMin = (it + 60) % 60 })
@@ -450,9 +449,7 @@ private fun SectionCaption(text: String) {
 private fun SystemSection(
     prefs: SignagePrefs,
     autostart: Boolean, onAutostart: (Boolean) -> Unit,
-    watchdog: Boolean, onWatchdog: (Boolean) -> Unit,
-    cacheLimit: Long, onCacheLimit: (Long) -> Unit,
-    cacheInfo: String
+    watchdog: Boolean, onWatchdog: (Boolean) -> Unit
 ) {
     if (prefs.isFirstLaunch) {
         Column(Modifier.fillMaxWidth().glass(shape = RoundedCornerShape(16.dp)).padding(16.dp),
@@ -468,18 +465,6 @@ private fun SystemSection(
     ToggleCard("Watchdog против замръзване",
         "Следи дали картината е забила (чрез JS heartbeat) и автоматично я презарежда.",
         watchdog, onWatchdog)
-
-    Column(Modifier.fillMaxWidth().glass().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Лимит на медийния кеш", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-        Text("Плеърът пази снимки и видеа локално, за да върви без интернет. Надхвърли ли " +
-            "лимита, най-отдавна показваните файлове се трият сами. Заето сега: $cacheInfo.",
-            color = Color.White.copy(0.55f), fontSize = 12.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            CACHE_LIMIT_OPTIONS.forEach { (label, bytes) ->
-                ChipButton(label, cacheLimit == bytes) { onCacheLimit(bytes) }
-            }
-        }
-    }
 
     SectionCaption("ПРАВА ЗА СЪН И СЪБУЖДАНЕ")
     KioskDiagnosticsSection(LocalContext.current)
