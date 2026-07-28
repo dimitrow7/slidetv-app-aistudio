@@ -192,22 +192,31 @@ fun SettingsDialog(
                     ) {
                         // The launcher icon is an adaptive-icon (XML) which
                         // painterResource can't load, so rasterise the real app
-                        // icon into a bitmap and show it bare (no frame).
+                        // icon into a bitmap and show it bare (no frame). Falls
+                        // back to the foreground vector if the icon can't be
+                        // resolved (e.g. under Robolectric).
                         val brandIcon = remember {
-                            val d = context.packageManager.getApplicationIcon(context.packageName)
-                            val bmp = android.graphics.Bitmap.createBitmap(
-                                96, 96, android.graphics.Bitmap.Config.ARGB_8888
-                            )
-                            val canvas = android.graphics.Canvas(bmp)
-                            d.setBounds(0, 0, canvas.width, canvas.height)
-                            d.draw(canvas)
-                            bmp.asImageBitmap()
+                            runCatching {
+                                val d = context.packageManager.getApplicationIcon(context.packageName)
+                                val bmp = android.graphics.Bitmap.createBitmap(
+                                    96, 96, android.graphics.Bitmap.Config.ARGB_8888
+                                )
+                                val canvas = android.graphics.Canvas(bmp)
+                                d.setBounds(0, 0, canvas.width, canvas.height)
+                                d.draw(canvas)
+                                bmp.asImageBitmap()
+                            }.getOrNull()
                         }
-                        Image(
-                            bitmap = brandIcon,
-                            contentDescription = null,
-                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp))
-                        )
+                        val iconModifier = Modifier.size(40.dp).clip(RoundedCornerShape(11.dp))
+                        if (brandIcon != null) {
+                            Image(bitmap = brandIcon, contentDescription = null, modifier = iconModifier)
+                        } else {
+                            Image(
+                                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                                contentDescription = null,
+                                modifier = iconModifier
+                            )
+                        }
                         Column {
                             Text("SlideTV", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
                             Text("АДМИНИСТРАЦИЯ", color = Color.White.copy(0.5f),
