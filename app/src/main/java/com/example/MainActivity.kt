@@ -162,7 +162,13 @@ class MainActivity : ComponentActivity() {
                                     }
                                 }, "SlideTVAndroid")
 
-                                webViewClient = SignageWebViewClient(ctx, settings.userAgentString) { view, url ->
+                                // Read through the lambda so a limit changed in Settings
+                                // applies to the next sweep without recreating the client.
+                                webViewClient = SignageWebViewClient(
+                                    ctx,
+                                    settings.userAgentString,
+                                    { prefs.cacheLimitBytes }
+                                ) { view, url ->
                                     lastWatchdogPingTime.set(System.currentTimeMillis())
                                     // Inject JavaScript Heartbeat loop once loaded
                                     injectWatchdogHeartbeatScript(view)
@@ -735,10 +741,18 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+/** Selectable ceilings for the media cache, paired with their byte value. */
+private val CACHE_LIMIT_OPTIONS = listOf(
+    "1 GB" to 1L * 1024 * 1024 * 1024,
+    "2 GB" to 2L * 1024 * 1024 * 1024,
+    "4 GB" to 4L * 1024 * 1024 * 1024,
+    "8 GB" to 8L * 1024 * 1024 * 1024
+)
+
 private fun getCacheSizeInfo(context: android.content.Context): String {
     val cacheDir = File(context.cacheDir, "signage_media_cache")
     if (!cacheDir.exists() || !cacheDir.isDirectory) return "0 B (0 файла)"
-    
+
     var size = 0L
     var count = 0
     cacheDir.listFiles()?.forEach { file ->
@@ -747,11 +761,12 @@ private fun getCacheSizeInfo(context: android.content.Context): String {
             count++
         }
     }
-    
+
     val sizeStr = when {
         size < 1024 -> "$size B"
         size < 1024 * 1024 -> String.format("%.2f KB", size.toDouble() / 1024)
-        else -> String.format("%.2f MB", size.toDouble() / (1024 * 1024))
+        size < 1024L * 1024 * 1024 -> String.format("%.2f MB", size.toDouble() / (1024 * 1024))
+        else -> String.format("%.2f GB", size.toDouble() / (1024L * 1024 * 1024))
     }
     return "$sizeStr ($count файла)"
 }
@@ -832,6 +847,7 @@ fun SettingsDialog(
     var localWakeMinute by remember { mutableStateOf(wakeMinute) }
     var localAutostartEnabled by remember { mutableStateOf(prefs.isAutostartEnabled) }
     var localWatchdogEnabled by remember { mutableStateOf(prefs.isWatchdogEnabled) }
+    var localCacheLimitBytes by remember { mutableStateOf(prefs.cacheLimitBytes) }
     var selectedTabIndex by remember { mutableStateOf(0) }
 
     AlertDialog(
@@ -1032,6 +1048,48 @@ fun SettingsDialog(
                                         uncheckedTrackColor = Color.DarkGray
                                     )
                                 )
+                            }
+
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                            // Media cache limit
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Text(
+                                    text = "Лимит на медийния кеш",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    text = "Плеърът пази снимките и видеата локално, за да върви без интернет. " +
+                                        "Надхвърли ли лимита, най-отдавна показваните файлове се трият сами — " +
+                                        "текущото съдържание остава. Заето сега: $cacheInfo.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    CACHE_LIMIT_OPTIONS.forEach { (label, bytes) ->
+                                        val isSelected = localCacheLimitBytes == bytes
+                                        Button(
+                                            onClick = { localCacheLimitBytes = bytes },
+                                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = if (isSelected) Color(0xFFE300A2) else Color(0x22FFFFFF),
+                                                contentColor = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f)
+                                            )
+                                        ) {
+                                            Text(
+                                                text = label,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    }
+                                }
                             }
 
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -1257,6 +1315,7 @@ fun SettingsDialog(
                         // On "Save and Close" click, commit all local state values to SharedPreferences and states
                         prefs.isAutostartEnabled = localAutostartEnabled
                         prefs.isWatchdogEnabled = localWatchdogEnabled
+                        prefs.cacheLimitBytes = localCacheLimitBytes
                         prefs.isScheduleEnabled = localIsScheduleEnabled
                         prefs.sleepHour = localSleepHour
                         prefs.sleepMinute = localSleepMinute

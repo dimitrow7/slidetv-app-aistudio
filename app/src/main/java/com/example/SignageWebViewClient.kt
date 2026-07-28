@@ -12,6 +12,7 @@ import android.webkit.WebViewClient
 import android.webkit.ServiceWorkerClient
 import android.webkit.ServiceWorkerController
 import com.example.cache.MediaCache
+import com.example.data.prefs.SignagePrefs
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -24,7 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class SignageWebViewClient(
     private val context: Context,
     private val userAgent: String? = null,
-    private val maxCacheBytes: () -> Long = { DEFAULT_MAX_CACHE_BYTES },
+    private val maxCacheBytes: () -> Long = { SignagePrefs.DEFAULT_CACHE_LIMIT_BYTES },
     private val onPageFinishedCallback: (WebView?, String?) -> Unit = { _, _ -> }
 ) : WebViewClient() {
     private val cacheDir = File(context.cacheDir, "signage_media_cache").apply { 
@@ -47,9 +48,6 @@ class SignageWebViewClient(
     private val trimScheduled = AtomicBoolean(false)
 
     companion object {
-        /** 2 GB. Overridden per device from settings; see SignagePrefs.cacheLimitBytes. */
-        const val DEFAULT_MAX_CACHE_BYTES = 2L * 1024 * 1024 * 1024
-
         private val downloadLocks = ConcurrentHashMap<String, Any>()
 
         /**
