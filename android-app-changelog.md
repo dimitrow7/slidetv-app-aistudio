@@ -26,6 +26,14 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
   be dialled down without a new build. The cache size readout now formats GB.
   (`ca19740`)
 
+### Changed
+- **Redesigned the hidden admin panel** — glassmorphic look with a left sidebar,
+  live connection status (online + Wi-Fi/Ethernet), and a clear focus ring on
+  every control for D-pad / remote navigation. Fixes the panel scaling oversized
+  on TVs and the content not scrolling to the end (clamped panel + flex layout).
+  The ~900-line panel was extracted from `MainActivity.kt` into its own
+  `AdminPanel.kt` (MainActivity dropped from 1738 → 742 lines).
+
 ### Internal / CI
 - Unit tests now run in CI on every push and pull request; the repo previously
   had only the two manual APK/AAB build workflows. (`52835d1`)
