@@ -21,6 +21,8 @@ class SignagePrefs(context: Context) {
         private const val KEY_LAST_WAKE_CMD = "last_wake_command_at"
         private const val KEY_LAST_RELOAD_CMD = "last_reload_command_at"
         private const val KEY_LAST_CLEAR_CACHE_CMD = "last_clear_cache_command_at"
+        private const val KEY_CACHE_LIMIT_BYTES = "cache_limit_bytes"
+        const val DEFAULT_CACHE_LIMIT_BYTES = 2L * 1024 * 1024 * 1024
     }
 
     var serverUrl: String
@@ -78,6 +80,14 @@ class SignagePrefs(context: Context) {
     var lastClearCacheCommandAt: Long
         get() = prefs.getLong(KEY_LAST_CLEAR_CACHE_CMD, 0L)
         set(value) = prefs.edit().putLong(KEY_LAST_CLEAR_CACHE_CMD, value).apply()
+
+    /**
+     * Ceiling for the on-disk media cache. Past it, the least recently used files are
+     * evicted. A small box with a video playlist would otherwise fill its storage.
+     */
+    var cacheLimitBytes: Long
+        get() = prefs.getLong(KEY_CACHE_LIMIT_BYTES, DEFAULT_CACHE_LIMIT_BYTES)
+        set(value) = prefs.edit().putLong(KEY_CACHE_LIMIT_BYTES, value).apply()
 
     // Derives API base URL from serverUrl (e.g. "https://app.slidetv.eu/player" → "https://app.slidetv.eu")
     val apiBaseUrl: String

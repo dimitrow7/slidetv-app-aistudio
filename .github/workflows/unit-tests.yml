@@ -1,0 +1,43 @@
+name: Unit Tests
+
+# Runs the host-side unit tests (`app/src/test`). No device or emulator involved.
+# The ubuntu runner ships the Android SDK, which is why this cannot be run on a
+# dev machine without a local SDK install.
+
+on:
+  push:
+    branches-ignore: []
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # JDK 21, not the 17 the build workflows use: the Robolectric tests run
+      # against the API 36 android-all jar, which needs a newer JVM.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Run unit tests
+        run: gradle testDebugUnitTest
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: app/build/reports/tests/testDebugUnitTest
+          retention-days: 7
