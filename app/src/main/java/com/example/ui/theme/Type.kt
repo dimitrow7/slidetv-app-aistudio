@@ -1,6 +1,7 @@
 package com.example.ui.theme
 
 import androidx.compose.material3.Typography
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -12,10 +13,12 @@ import com.example.R
 // ─── Brand fonts (bundled variable TTFs) ─────────────────────────────────────
 // One variable file per family; weights are driven through the `wght` axis so a
 // single .ttf covers the whole range. variationSettings is honoured on API 26+.
+@OptIn(ExperimentalTextApi::class)
 private fun montserrat(weight: FontWeight) =
     Font(R.font.montserrat, weight = weight,
         variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)))
 
+@OptIn(ExperimentalTextApi::class)
 private fun wixDisplay(weight: FontWeight) =
     Font(R.font.wixmadefordisplay, weight = weight,
         variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)))
