@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -37,7 +38,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import com.example.ui.theme.MontserratFamily
+import com.example.ui.theme.WixDisplayFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -134,6 +138,12 @@ fun SettingsDialog(
 
     var section by remember { mutableStateOf(0) }
 
+    // Content scroll is shared across tabs, so reset to the top whenever the
+    // section changes — otherwise a tab opens mid-scroll (e.g. Информация landing
+    // straight on the "Разкачи устройство" button).
+    val scrollState = rememberScrollState()
+    LaunchedEffect(section) { scrollState.scrollTo(0) }
+
     // Live connection status shown in the top-right of the panel.
     var online by remember { mutableStateOf(true) }
     var connType by remember { mutableStateOf("Мрежа") }
@@ -152,6 +162,11 @@ fun SettingsDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
+      // Montserrat is the default for all text in the panel; headings opt into
+      // Wix Madefor Display explicitly.
+      CompositionLocalProvider(
+          LocalTextStyle provides LocalTextStyle.current.merge(TextStyle(fontFamily = MontserratFamily))
+      ) {
         // Full-screen ambient background with soft colour blobs behind the glass.
         Box(
             modifier = Modifier
@@ -168,12 +183,14 @@ fun SettingsDialog(
             AmbientGlow(AccentPink,   460.dp,    40.dp,   320.dp, 0.14f)
 
             // Clamped glass panel — same physical size on phones, tablets and 4K TVs.
+            // Fractions stay well inside the screen so TV overscan (~5%) can't clip
+            // the panel edges (e.g. the device card at the sidebar's bottom).
             Row(
                 modifier = Modifier
-                    .fillMaxWidth(0.94f)
-                    .fillMaxHeight(0.9f)
+                    .fillMaxWidth(0.88f)
+                    .fillMaxHeight(0.82f)
                     .widthIn(max = 1080.dp)
-                    .heightIn(max = 660.dp)
+                    .heightIn(max = 640.dp)
                     .glass(shape = RoundedCornerShape(28.dp))
                     .padding(2.dp)
             ) {
@@ -218,17 +235,18 @@ fun SettingsDialog(
                             )
                         }
                         Column {
-                            Text("SlideTV", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Text("SlideTV", color = Color.White, fontWeight = FontWeight.Black,
+                                fontSize = 16.sp, fontFamily = WixDisplayFamily)
                             Text("АДМИНИСТРАЦИЯ", color = Color.White.copy(0.5f),
                                 fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                         }
                     }
 
-                    NavItem(Icons.Default.Settings, "Система", "SYSTEM", section == 0,
+                    NavItem(Icons.Default.Settings, "Система", section == 0,
                         Modifier.focusRequester(firstFocus)) { section = 0 }
-                    NavItem(Icons.Default.DateRange, "График", "ON / OFF", section == 1) { section = 1 }
-                    NavItem(Icons.Default.Refresh, "Кеш", "STORAGE", section == 2) { section = 2 }
-                    NavItem(Icons.Default.Info, "Информация", "SYSTEM", section == 3) { section = 3 }
+                    NavItem(Icons.Default.DateRange, "График", section == 1) { section = 1 }
+                    NavItem(Icons.Default.Refresh, "Кеш", section == 2) { section = 2 }
+                    NavItem(Icons.Default.Info, "Информация", section == 3) { section = 3 }
 
                     Spacer(Modifier.weight(1f))
 
@@ -264,7 +282,8 @@ fun SettingsDialog(
                                     2 -> "Кеш и съхранение"
                                     else -> "Информация"
                                 },
-                                color = Color.White, fontWeight = FontWeight.Black, fontSize = 24.sp
+                                color = Color.White, fontWeight = FontWeight.Black, fontSize = 24.sp,
+                                fontFamily = WixDisplayFamily
                             )
                         }
                         Row(
@@ -288,7 +307,7 @@ fun SettingsDialog(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(scrollState),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         when (section) {
@@ -338,6 +357,7 @@ fun SettingsDialog(
                 }
             }
         }
+      }
     }
 }
 
@@ -346,7 +366,6 @@ fun SettingsDialog(
 private fun NavItem(
     icon: ImageVector,
     title: String,
-    subtitle: String,
     selected: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit
@@ -383,11 +402,8 @@ private fun NavItem(
                 tint = if (selected) Color.White else AccentCyan.copy(0.85f),
                 modifier = Modifier.size(18.dp))
         }
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Text(subtitle, color = Color.White.copy(0.45f),
-                fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp)
-        }
+        Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+            fontFamily = WixDisplayFamily, modifier = Modifier.weight(1f))
         if (selected) Box(Modifier.size(8.dp).background(AccentCyan, CircleShape))
     }
 }
@@ -404,7 +420,8 @@ private fun ToggleCard(title: String, desc: String, checked: Boolean, onToggle: 
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
-            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+                fontFamily = WixDisplayFamily)
             Text(desc, color = Color.White.copy(0.55f), fontSize = 12.sp)
         }
         Switch(
@@ -463,7 +480,8 @@ private fun SystemSection(
     if (prefs.isFirstLaunch) {
         Column(Modifier.fillMaxWidth().glass(shape = RoundedCornerShape(16.dp)).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Добре дошли в SlideTV!", color = AccentCyan, fontWeight = FontWeight.Bold)
+            Text("Добре дошли в SlideTV!", color = AccentCyan, fontWeight = FontWeight.Bold,
+                fontFamily = WixDisplayFamily)
             Text("Това устройство се настройва за първи път. Изберете дали приложението да " +
                 "стартира автоматично при включване. Накрая натиснете „Запази“.",
                 color = Color.White.copy(0.85f), fontSize = 12.sp)
@@ -509,10 +527,12 @@ private fun CacheSection(
 ) {
     Column(Modifier.fillMaxWidth().glass().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionCaption("ЗАЕТО")
-        Text(cacheInfo, color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp)
+        Text(cacheInfo, color = Color.White, fontWeight = FontWeight.Black, fontSize = 22.sp,
+            fontFamily = WixDisplayFamily)
     }
     Column(Modifier.fillMaxWidth().glass().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text("Лимит на кеша", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Text("Лимит на кеша", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+            fontFamily = WixDisplayFamily)
         Text("Най-отдавна показваното съдържание се трие само над този лимит.",
             color = Color.White.copy(0.55f), fontSize = 12.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -535,7 +555,8 @@ private fun InfoSection(version: String, cacheInfo: String, serverUrl: String, o
         InfoRow("Адрес на плеъра", serverUrl, AccentCyan)
     }
     Column(Modifier.fillMaxWidth().glass().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Бързи инструкции", color = AccentCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        Text("Бързи инструкции", color = AccentCyan, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+            fontFamily = WixDisplayFamily)
         Text("• За да отворите този панел отново, натиснете бързо 5 пъти бутона OK на " +
             "дистанционното в рамките на 2.5 секунди.", color = Color.White.copy(0.75f), fontSize = 11.sp)
         Text("• Изчистването на кеша премахва временните файлове и ги сваля наново при следващо зареждане.",

@@ -11,7 +11,18 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
-_Nothing yet._
+### Changed
+- **Admin panel typography** — Wix Madefor Display for headings, Montserrat for
+  body/controls (bundled variable fonts, no runtime download).
+- **Nav items** are cleaner — dropped the redundant SYSTEM / ON-OFF / STORAGE
+  sub-labels under each tab name.
+
+### Fixed
+- **TV overscan** no longer clips the panel — the device card at the bottom of
+  the sidebar was cut off on TVs. The panel now sits further inside the screen.
+- **Информация tab opens at the top.** Content scroll is reset on every tab
+  switch, so the tab no longer lands mid-scroll on the "Разкачи устройство"
+  button with the version/cache/URL rows scrolled out of view.
 
 ---
 
