@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Info
 import com.example.data.prefs.SignagePrefs
+import com.example.log.DeviceLogger
 import com.example.ui.theme.MyApplicationTheme
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.rememberScrollState
@@ -86,6 +87,10 @@ class MainActivity : ComponentActivity() {
         if (prefs.serverUrl == "https://app.slidetv.eu") {
             prefs.serverUrl = "https://app.slidetv.eu/player"
         }
+
+        // Start the log shipper. It stays disabled until a poll reports
+        // logs_enabled=true, so this only spins the flush loop.
+        DeviceLogger.start(prefs.apiBaseUrl)
 
         // Initialize isSleepingState based on current time schedule
         isSleepingState.value = ScheduleManager.isCurrentlyInSleepSchedule(this)
@@ -212,6 +217,7 @@ class MainActivity : ComponentActivity() {
                                 // 75 seconds threshold
                                 if (timeDiff > 75000) {
                                     Log.w("SlideTVWatchdog", "Watchdog triggered. No ping for $timeDiff ms. Force refreshing...")
+                                    DeviceLogger.log("watchdog: no ping for ${timeDiff}ms, reloading")
                                     webView?.post {
                                         webView?.reload()
                                         injectWatchdogHeartbeatScript(webView)
@@ -252,6 +258,7 @@ class MainActivity : ComponentActivity() {
                                 if (scheduleOverrideState == null && isSleeping != targetSleepState) {
                                     isSleeping = targetSleepState
                                     Log.d("SlideTVSchedule", "Schedule state updated. Is Sleeping: $targetSleepState")
+                                    DeviceLogger.log(if (targetSleepState) "scheduled sleep" else "scheduled wake")
                                 }
                                 kotlinx.coroutines.delay(10000) // check every 10 seconds
                             }
@@ -330,6 +337,12 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(Unit) {
                         val api = DeviceApiClient.getService(prefs.apiBaseUrl)
 
+                        // Log network trouble on state change only: one line on the
+                        // first failure, then silence, then one on recovery. Logging
+                        // every failed poll would flood the ~500-line buffer during a
+                        // long outage — exactly when the earlier history matters most.
+                        var networkDown = false
+
                         // Polling loop
                         while (true) {
                             kotlinx.coroutines.delay(30_000)
@@ -339,6 +352,8 @@ class MainActivity : ComponentActivity() {
                             if (prefs.deviceToken != token) {
                                 prefs.deviceToken = token
                                 Log.d("SlideTVPolling", "Using web player device token: $token")
+                                // "paired" is logged inside DeviceLogger.updateConfig once
+                                // logging is actually enabled — see the comment there.
                             }
 
                             try {
@@ -352,12 +367,22 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
 
+                                // Poll succeeded — note recovery if we were offline.
+                                if (networkDown) {
+                                    networkDown = false
+                                    DeviceLogger.log("network recovered")
+                                }
+
                                 // Device was deleted from SaaS — clear token and re-init next cycle
                                 if (pollResp.status == "unpaired") {
                                     Log.w("SlideTVPolling", "Screen unpaired from SaaS. Clearing token.")
+                                    DeviceLogger.log("unpaired from SaaS")
                                     prefs.deviceToken = ""
                                     continue
                                 }
+
+                                // Server decides whether this screen ships logs.
+                                DeviceLogger.updateConfig(pollResp.logsEnabled, token)
 
                                 // First poll of this session: adopt the server's current command
                                 // timestamps as the baseline so historical commands don't all fire
@@ -378,6 +403,7 @@ class MainActivity : ComponentActivity() {
                                     scheduleOverrideState = true
                                     prefs.lastSleepCommandAt = pollResp.commandSleepAt
                                     Log.d("SlideTVPolling", "Remote sleep command executed.")
+                                    DeviceLogger.log("remote sleep command")
                                 }
 
                                 // Remote wake command — manual override: stay awake until the
@@ -389,6 +415,7 @@ class MainActivity : ComponentActivity() {
                                     wakeHardwareScreen()
                                     prefs.lastWakeCommandAt = pollResp.commandWakeAt
                                     Log.d("SlideTVPolling", "Remote wake command executed.")
+                                    DeviceLogger.log("remote wake command")
                                 }
 
                                 // Remote reload command
@@ -397,6 +424,7 @@ class MainActivity : ComponentActivity() {
                                     lastWatchdogPingTime.set(System.currentTimeMillis())
                                     prefs.lastReloadCommandAt = pollResp.commandReloadAt
                                     Log.d("SlideTVPolling", "Remote reload command executed.")
+                                    DeviceLogger.log("remote reload (manifest refresh)")
                                 }
 
                                 // Remote clear cache command
@@ -411,6 +439,7 @@ class MainActivity : ComponentActivity() {
                                     lastWatchdogPingTime.set(System.currentTimeMillis())
                                     prefs.lastClearCacheCommandAt = pollResp.commandClearCacheAt
                                     Log.d("SlideTVPolling", "Remote clear-cache command executed.")
+                                    DeviceLogger.log("remote clear-cache command")
                                 }
 
                                 // Sync schedule from SaaS operating_hours (overrides local settings)
@@ -433,11 +462,16 @@ class MainActivity : ComponentActivity() {
                                         wakeMinute = oh.wakeMinute
                                         ScheduleManager.updateAlarms(context)
                                         Log.d("SlideTVPolling", "Schedule synced from SaaS: enabled=${oh.enabled} sleep=${oh.sleepHour}:${oh.sleepMinute} wake=${oh.wakeHour}:${oh.wakeMinute}")
+                                        DeviceLogger.log("schedule synced from SaaS (enabled=${oh.enabled} sleep=${oh.sleepHour}:${oh.sleepMinute} wake=${oh.wakeHour}:${oh.wakeMinute})")
                                     }
                                 }
 
                             } catch (e: Exception) {
                                 Log.e("SlideTVPolling", "Poll failed: ${e.message}")
+                                if (!networkDown) {
+                                    networkDown = true
+                                    DeviceLogger.log("network error: poll failed (${e.message})")
+                                }
                             }
                         }
                     }
@@ -456,6 +490,7 @@ class MainActivity : ComponentActivity() {
                             wakeMinute = wakeMinute,
                             onWakeMinuteChanged = { wakeMinute = it },
                             onClearCache = {
+                                DeviceLogger.log("cache cleared (admin panel)")
                                 webView?.clearCache(true)
                                 try {
                                     val cacheDir = File(context.cacheDir, "signage_media_cache")
@@ -471,6 +506,7 @@ class MainActivity : ComponentActivity() {
                                 showSettings = false
                             },
                             onDisconnectDevice = {
+                                DeviceLogger.log("device disconnected (admin panel)")
                                 try {
                                     WebStorage.getInstance().deleteAllData()
                                     CookieManager.getInstance().removeAllCookies(null)
@@ -653,6 +689,16 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         hideSystemBars()
+    }
+
+    override fun onDestroy() {
+        // Only records the event — it does NOT stop the logger. DeviceLogger is
+        // process-lived on purpose (start() is idempotent; tearing it down on
+        // every config change would kill logging across a rotation). Delivery is
+        // best-effort: the in-memory buffer usually dies with the process before
+        // the next 5s flush.
+        DeviceLogger.log("player stopping")
+        super.onDestroy()
     }
 
     private fun handleScheduleIntent(intent: Intent?) {

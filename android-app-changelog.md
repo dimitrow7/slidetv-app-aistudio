@@ -11,6 +11,22 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
+### Added
+- **Device log shipping is back.** The player again posts lifecycle events to
+  `POST /api/device/log` (it stopped after build 0.33). It ships only its own
+  native events — start, pairing, remote reload, sleep/wake (remote and
+  scheduled), cache clears, watchdog reloads, and network up/down — never
+  playback detail. Network trouble is logged on state change only (one line on
+  the first failed poll, one on recovery), so a long outage can't flood the
+  buffer with repeats. A "player stopping" line is recorded on teardown but is
+  best-effort: the in-memory buffer usually dies with the process before the
+  next flush. Off by default: nothing is sent unless a screen has `logs_enabled`
+  turned on in the SaaS. Lines are held in a ~500-line in-memory ring buffer (no
+  disk), flushed every 60s or at 50 lines (max 200 per request), capped at 60
+  requests/hour, with network errors silent and the lines kept for the next
+  attempt. The web player will report to the same endpoint independently (rows
+  tagged with a `web-` version prefix), so native does not relay web logs.
+
 ### Changed
 - **Admin panel typography** — Wix Madefor Display for headings, Montserrat for
   body/controls (bundled variable fonts, no runtime download).

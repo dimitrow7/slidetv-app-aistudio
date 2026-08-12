@@ -13,4 +13,10 @@ interface DeviceApiService {
         @Header("X-Device-Token") token: String,
         @Body body: PollRequestBody
     ): PollResponse
+
+    @POST("api/device/log")
+    suspend fun log(
+        @Header("X-Device-Token") token: String,
+        @Body body: LogRequestBody
+    ): LogResponse
 }

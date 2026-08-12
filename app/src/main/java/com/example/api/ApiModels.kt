@@ -27,7 +27,10 @@ data class PollResponse(
     @Json(name = "command_wake_at") val commandWakeAt: Long = 0,
     @Json(name = "command_reload_at") val commandReloadAt: Long = 0,
     @Json(name = "command_clear_cache_at") val commandClearCacheAt: Long = 0,
-    @Json(name = "operating_hours") val operatingHours: OperatingHours? = null
+    @Json(name = "operating_hours") val operatingHours: OperatingHours? = null,
+    // The server has returned this for months; the model just never read it.
+    // Off by default — the device sends no logs unless a screen opts in.
+    @Json(name = "logs_enabled") val logsEnabled: Boolean = false
 )
 
 @JsonClass(generateAdapter = true)
@@ -35,4 +38,17 @@ data class PollRequestBody(
     @Json(name = "app_version") val appVersion: String,
     @Json(name = "version_code") val versionCode: Int,
     @Json(name = "device_type") val deviceType: String = "android"
+)
+
+@JsonClass(generateAdapter = true)
+data class LogRequestBody(
+    // Each entry is "timestamp_ms|message"; the server splits on the first '|'.
+    val logs: List<String>,
+    @Json(name = "app_version") val appVersion: String,
+    @Json(name = "version_code") val versionCode: Int
+)
+
+@JsonClass(generateAdapter = true)
+data class LogResponse(
+    val ok: Boolean = false
 )
