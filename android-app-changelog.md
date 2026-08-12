@@ -11,6 +11,12 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
+_Nothing yet — merged work ships in the next release._
+
+---
+
+## [1.0.5] — versionCode 14 — released to Play production 2026-08-12
+
 ### Added
 - **Device log shipping is back.** The player again posts lifecycle events to
   `POST /api/device/log` (it stopped after build 0.33). It ships only its own
