@@ -11,7 +11,18 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
-_Nothing yet — merged work ships in the next release._
+### Fixed
+- **The poll loop no longer dies when the token cookie disappears.** The native
+  shell polls the SaaS using the web player's `slidetv_device_token` cookie, but
+  Android writes cookies to disk only on an explicit flush — a force stop wiped
+  it while the web player (backed by localStorage) kept running. The screen then
+  silently stopped getting its schedule, sleep/wake, and clear-cache commands,
+  with nothing in the log to show why. The loop now falls back to the last token
+  it persisted, so it keeps polling; the cookie stays the source of truth and is
+  flushed to disk the moment a screen (re)pairs. If no token can be found by any
+  path the loop logs it once (not every 30s) and idles; a one-time line also
+  records when it is running on the stored token because the cookie is gone.
+  Ships in the same APK as the device-logging work.
 
 ---
 

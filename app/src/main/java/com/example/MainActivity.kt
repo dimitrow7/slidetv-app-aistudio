@@ -343,17 +343,54 @@ class MainActivity : ComponentActivity() {
                         // long outage — exactly when the earlier history matters most.
                         var networkDown = false
 
+                        // Same state-change pattern for token resolution: log once when
+                        // the loop goes idle for want of a token, and once when it starts
+                        // running on the stored token because the cookie has vanished.
+                        var tokenMissingLogged = false
+                        var usingStoredTokenLogged = false
+
                         // Polling loop
                         while (true) {
                             kotlinx.coroutines.delay(30_000)
 
-                            val token = readPlayerDeviceToken()
-                            if (token.isNullOrEmpty()) continue
-                            if (prefs.deviceToken != token) {
-                                prefs.deviceToken = token
-                                Log.d("SlideTVPolling", "Using web player device token: $token")
-                                // "paired" is logged inside DeviceLogger.updateConfig once
-                                // logging is actually enabled — see the comment there.
+                            // Resolve the device token once. The web player's cookie is the
+                            // source of truth, but it lives in memory and Android writes cookies
+                            // to disk only on flush() — a force stop wipes it while localStorage
+                            // (and our persisted copy) survive. Fall back to the last token we
+                            // stored so the poll loop keeps running instead of idling silently.
+                            val cookieToken = readCookieDeviceToken()
+                            val token = cookieToken ?: prefs.deviceToken.takeIf { it.isNotBlank() }
+
+                            if (token.isNullOrEmpty()) {
+                                // No token by any path — the loop can't poll. Log once on the
+                                // state change (not every 30s) then idle until one appears.
+                                if (!tokenMissingLogged) {
+                                    tokenMissingLogged = true
+                                    Log.w("SlideTVPolling", "No device token from cookie or prefs — poll loop idle")
+                                    DeviceLogger.log("no device token — poll loop idle")
+                                }
+                                continue
+                            }
+                            tokenMissingLogged = false
+
+                            if (cookieToken != null) {
+                                usingStoredTokenLogged = false
+                                if (prefs.deviceToken != cookieToken) {
+                                    // New token from the web player — persist it AND flush so it
+                                    // survives a force stop, not just this process. "paired" is
+                                    // logged inside DeviceLogger.updateConfig once logging is
+                                    // actually enabled — see the comment there.
+                                    prefs.deviceToken = cookieToken
+                                    CookieManager.getInstance().flush()
+                                    Log.d("SlideTVPolling", "Using web player device token: $cookieToken")
+                                }
+                            } else if (!usingStoredTokenLogged) {
+                                // Cookie gone (e.g. force stop cleared it) — running on the
+                                // stored token. Log once so the missing cookie is visible even
+                                // while everything still works.
+                                usingStoredTokenLogged = true
+                                Log.w("SlideTVPolling", "token cookie missing, using stored token")
+                                DeviceLogger.log("token cookie missing, using stored token")
                             }
 
                             try {
@@ -714,12 +751,14 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Reads the device token the embedded web player obtained after pairing.
-     * The player (web /player page) stores it as the `slidetv_device_token` cookie.
-     * Reusing it makes the native shell and the web player a SINGLE screen identity
-     * on the SaaS, so remote schedule/commands target the screen the user actually sees.
+     * Reads the device token the embedded web player obtained after pairing, from
+     * the `slidetv_device_token` cookie ONLY. Returns null when the cookie is absent
+     * (e.g. a force stop wiped it before it was flushed to disk); the poll loop then
+     * falls back to the persisted `prefs.deviceToken`. Reusing this token makes the
+     * native shell and the web player a SINGLE screen identity on the SaaS, so remote
+     * schedule/commands target the screen the user actually sees.
      */
-    private fun readPlayerDeviceToken(): String? {
+    private fun readCookieDeviceToken(): String? {
         return try {
             val cookies = CookieManager.getInstance().getCookie(prefs.serverUrl) ?: return null
             cookies.split(";")
