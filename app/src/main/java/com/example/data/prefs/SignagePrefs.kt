@@ -23,6 +23,7 @@ class SignagePrefs(context: Context) {
         private const val KEY_LAST_CLEAR_CACHE_CMD = "last_clear_cache_command_at"
         private const val KEY_CACHE_LIMIT_BYTES = "cache_limit_bytes"
         const val DEFAULT_CACHE_LIMIT_BYTES = 2L * 1024 * 1024 * 1024
+        private const val KEY_DEVICE_CLASS = "device_class"
     }
 
     var serverUrl: String
@@ -88,6 +89,15 @@ class SignagePrefs(context: Context) {
     var cacheLimitBytes: Long
         get() = prefs.getLong(KEY_CACHE_LIMIT_BYTES, DEFAULT_CACHE_LIMIT_BYTES)
         set(value) = prefs.edit().putLong(KEY_CACHE_LIMIT_BYTES, value).apply()
+
+    /**
+     * User-confirmed device class — "tv" | "box" | "handheld" (see [com.example.device.DeviceClass]).
+     * Empty means the user has not chosen yet, so the panel falls back to the runtime
+     * heuristic. Drives which permission rows, power guidance and launcher option show.
+     */
+    var deviceClass: String
+        get() = prefs.getString(KEY_DEVICE_CLASS, "") ?: ""
+        set(value) = prefs.edit().putString(KEY_DEVICE_CLASS, value).apply()
 
     // Derives API base URL from serverUrl (e.g. "https://app.slidetv.eu/player" → "https://app.slidetv.eu")
     val apiBaseUrl: String

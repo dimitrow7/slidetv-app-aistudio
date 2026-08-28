@@ -41,6 +41,24 @@
             </intent-filter>
         </activity>
 
+        <!-- Optional HOME (launcher) role for TV / box, where there is no
+             per-app autostart. Disabled by default so phones never offer the
+             app as a launcher; the admin panel enables it at runtime when the
+             user opts in on a TV-class device. Declared after MainActivity so
+             the alias target resolves. -->
+        <activity-alias
+            android:name=".HomeAlias"
+            android:targetActivity=".MainActivity"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Broadcast receiver for system startup auto-start -->
         <receiver
             android:name=".BootCompletedReceiver"

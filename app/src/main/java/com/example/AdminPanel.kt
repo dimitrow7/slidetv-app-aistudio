@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.prefs.SignagePrefs
+import com.example.device.DeviceClass
 import java.io.File
 
 // ─── Palette ─────────────────────────────────────────────────────────────────
@@ -135,6 +136,9 @@ fun SettingsDialog(
     var sMin by remember { mutableStateOf(sleepMinute) }
     var wHour by remember { mutableStateOf(wakeHour) }
     var wMin by remember { mutableStateOf(wakeMinute) }
+    // Device class: the user's stored choice, else the runtime heuristic. Persisted
+    // the moment it is picked (it's a device fact, not a draft), so it survives Отказ.
+    var deviceClass by remember { mutableStateOf(DeviceClass.resolve(context, prefs.deviceClass)) }
 
     var section by remember { mutableStateOf(0) }
 
@@ -311,7 +315,8 @@ fun SettingsDialog(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         when (section) {
-                            0 -> SystemSection(prefs, autostart, { autostart = it }, watchdog, { watchdog = it })
+                            0 -> SystemSection(prefs, autostart, { autostart = it }, watchdog, { watchdog = it },
+                                deviceClass, { deviceClass = it; prefs.deviceClass = it.id })
                             1 -> ScheduleSection(scheduleOn, { scheduleOn = it },
                                 sHour, { sHour = (it + 24) % 24 }, sMin, { sMin = (it + 60) % 60 },
                                 wHour, { wHour = (it + 24) % 24 }, wMin, { wMin = (it + 60) % 60 })
@@ -331,6 +336,7 @@ fun SettingsDialog(
                             prefs.isFirstLaunch = false
                             prefs.isAutostartEnabled = autostart
                             prefs.isWatchdogEnabled = watchdog
+                            prefs.deviceClass = deviceClass.id
                             prefs.cacheLimitBytes = cacheLimit
                             prefs.isScheduleEnabled = scheduleOn
                             prefs.sleepHour = sHour
@@ -475,18 +481,20 @@ private fun SectionCaption(text: String) {
 private fun SystemSection(
     prefs: SignagePrefs,
     autostart: Boolean, onAutostart: (Boolean) -> Unit,
-    watchdog: Boolean, onWatchdog: (Boolean) -> Unit
+    watchdog: Boolean, onWatchdog: (Boolean) -> Unit,
+    deviceClass: DeviceClass, onDeviceClass: (DeviceClass) -> Unit
 ) {
     if (prefs.isFirstLaunch) {
         Column(Modifier.fillMaxWidth().glass(shape = RoundedCornerShape(16.dp)).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text("Добре дошли в SlideTV!", color = AccentCyan, fontWeight = FontWeight.Bold,
                 fontFamily = WixDisplayFamily)
-            Text("Това устройство се настройва за първи път. Изберете дали приложението да " +
-                "стартира автоматично при включване. Накрая натиснете „Запази“.",
+            Text("Това устройство се настройва за първи път. Изберете типа устройство и дали " +
+                "приложението да стартира автоматично при включване. Накрая натиснете „Запази“.",
                 color = Color.White.copy(0.85f), fontSize = 12.sp)
         }
     }
+    DeviceClassSelector(deviceClass, onDeviceClass)
     ToggleCard("Автоматичен старт", "Пуска плеъра автоматично след зареждане на устройството.",
         autostart, onAutostart)
     ToggleCard("Watchdog против замръзване",
@@ -494,7 +502,41 @@ private fun SystemSection(
         watchdog, onWatchdog)
 
     SectionCaption("ПРАВА ЗА СЪН И СЪБУЖДАНЕ")
-    KioskDiagnosticsSection(LocalContext.current)
+    KioskDiagnosticsSection(LocalContext.current, deviceClass)
+}
+
+// ─── Device-class selector ───────────────────────────────────────────────────
+@Composable
+private fun DeviceClassSelector(selected: DeviceClass, onSelect: (DeviceClass) -> Unit) {
+    Column(Modifier.fillMaxWidth().glass().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("Тип устройство", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp,
+            fontFamily = WixDisplayFamily)
+        Text("Определя кои настройки за захранване и стартиране са подходящи.",
+            color = Color.White.copy(0.55f), fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DeviceClassChip("Телевизор", selected == DeviceClass.TV, Modifier.weight(1f)) { onSelect(DeviceClass.TV) }
+            DeviceClassChip("Бокс към ТВ", selected == DeviceClass.BOX, Modifier.weight(1f)) { onSelect(DeviceClass.BOX) }
+            DeviceClassChip("Таблет/телефон", selected == DeviceClass.HANDHELD, Modifier.weight(1f)) { onSelect(DeviceClass.HANDHELD) }
+        }
+    }
+}
+
+@Composable
+private fun DeviceClassChip(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        modifier = modifier.clip(shape)
+            .then(if (selected) Modifier.background(AccentGradient) else Modifier.background(Color.White.copy(0.06f)))
+            .border(BorderStroke(if (focused) 2.dp else 1.dp,
+                when { focused -> AccentCyan; selected -> Color.White.copy(0.25f); else -> Color.White.copy(0.08f) }), shape)
+            .clickable(interactionSource = interaction, indication = null) { onClick() }
+            .padding(vertical = 10.dp, horizontal = 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(label, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, textAlign = TextAlign.Center)
+    }
 }
 
 @Composable
@@ -634,17 +676,23 @@ private fun NumberBox(value: String) {
 }
 
 // ─── Permission diagnostics (glass restyle) ──────────────────────────────────
+// The row set adapts to the device class: a mains-powered TV / box has no battery
+// concept and no per-app autostart (being the HOME app is the autostart instead),
+// while a handheld keeps the battery + OEM-autostart rows.
 @Composable
-fun KioskDiagnosticsSection(context: android.content.Context) {
+fun KioskDiagnosticsSection(context: android.content.Context, deviceClass: DeviceClass) {
+    val tvMode = deviceClass.isTvMode
     var battery by remember { mutableStateOf(isIgnoringBatteryOptimizations(context)) }
     var overlay by remember { mutableStateOf(canDrawOverlays(context)) }
     var exactAlarm by remember { mutableStateOf(canScheduleExactAlarms(context)) }
+    var homeDefault by remember { mutableStateOf(isHomeAliasEnabled(context)) }
 
     LaunchedEffect(Unit) {
         while (true) {
             battery = isIgnoringBatteryOptimizations(context)
             overlay = canDrawOverlays(context)
             exactAlarm = canScheduleExactAlarms(context)
+            homeDefault = isHomeAliasEnabled(context)
             kotlinx.coroutines.delay(2000)
         }
     }
@@ -652,9 +700,12 @@ fun KioskDiagnosticsSection(context: android.content.Context) {
     Column(Modifier.fillMaxWidth().glass().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text("За безупречно събуждане и сън осигурете следните права:",
             color = Color.White.copy(0.7f), fontSize = 12.sp)
-        DiagnosticRow("Без ограничение на батерията [Doze]",
-            "Предпазва приложението от заспиване през нощта.", battery) {
-            launchBatteryOptimizationSettings(context)
+        // Battery optimisation only matters on a battery-managed handheld.
+        if (!tvMode) {
+            DiagnosticRow("Без ограничение на батерията [Doze]",
+                "Предпазва приложението от заспиване през нощта.", battery) {
+                launchBatteryOptimizationSettings(context)
+            }
         }
         DiagnosticRow("Показване над други приложения [Overlay]",
             "Позволява на алармата да активира екрана от фон.", overlay) {
@@ -666,14 +717,41 @@ fun KioskDiagnosticsSection(context: android.content.Context) {
                 launchExactAlarmSettings(context)
             }
         }
-        DiagnosticRow("Фонова автономия и стартиране",
-            "Изберете „Без ограничения“ и разрешете автостарт, ако има опция.", false, "Отвори") {
-            launchAutoStartSettings(context)
+        if (tvMode) {
+            // No per-app autostart on a TV / box — being the default launcher is it.
+            DiagnosticRow(
+                if (homeDefault) "Launcher по подразбиране (активиран)" else "Направи launcher по подразбиране",
+                "Стартира сам при включване и след връщане към началния екран.",
+                homeDefault, if (homeDefault) "Промени" else "Активирай"
+            ) {
+                setHomeAliasEnabled(context, true)
+                launchHomePicker(context)
+            }
+        } else {
+            DiagnosticRow("Фонова автономия и стартиране",
+                "Изберете „Без ограничения“ и разрешете автостарт, ако има опция.", false, "Отвори") {
+                launchAutoStartSettings(context)
+            }
         }
-        Box(Modifier.fillMaxWidth().background(AccentPink.copy(0.14f), RoundedCornerShape(8.dp)).padding(10.dp)) {
-            Text("СЪВЕТ: За 100% стабилност дръжте устройството постоянно на зарядно.",
-                color = Color(0xFFFF99D6), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        // Power guidance is honest about the platform ceiling per class.
+        when (deviceClass) {
+            DeviceClass.TV -> GuidanceCard(
+                "Този телевизор не може да бъде изключен от приложение. За истинско вкл./изкл. " +
+                "използвайте вградения таймер на телевизора или Android бокс с HDMI-CEC.")
+            DeviceClass.BOX -> GuidanceCard(
+                "За истинско изключване на телевизора: включете HDMI-CEC (One-key power) в " +
+                "настройките на бокса и задайте кратък таймаут за изключване на екрана. Тогава " +
+                "заспиването на бокса приспива и телевизора.")
+            DeviceClass.HANDHELD -> GuidanceCard(
+                "СЪВЕТ: За 100% стабилност дръжте устройството постоянно на зарядно.")
         }
+    }
+}
+
+@Composable
+private fun GuidanceCard(text: String) {
+    Box(Modifier.fillMaxWidth().background(AccentPink.copy(0.14f), RoundedCornerShape(8.dp)).padding(10.dp)) {
+        Text(text, color = Color(0xFFFF99D6), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -854,4 +932,47 @@ private fun launchAutoStartSettings(context: android.content.Context) {
         } catch (e: Exception) { /* try next */ }
     }
     launchAppInfoSettings(context)
+}
+
+// ─── Default-launcher (HOME) control for TV / box ─────────────────────────────
+// A HOME activity-alias is declared disabled in the manifest so phones never see
+// the app as a launcher. Enabling it makes the app a candidate; then the system's
+// Home-app picker lets the user set it as default. Fully setting the default from
+// code needs ADB / privilege, so the last step stays the user's choice.
+private const val HOME_ALIAS = "com.example.HomeAlias"
+
+private fun isHomeAliasEnabled(context: android.content.Context): Boolean {
+    return try {
+        val cn = android.content.ComponentName(context.packageName, HOME_ALIAS)
+        context.packageManager.getComponentEnabledSetting(cn) ==
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+    } catch (e: Exception) { false }
+}
+
+private fun setHomeAliasEnabled(context: android.content.Context, enabled: Boolean) {
+    try {
+        val cn = android.content.ComponentName(context.packageName, HOME_ALIAS)
+        val state = if (enabled)
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        else
+            android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        context.packageManager.setComponentEnabledSetting(
+            cn, state, android.content.pm.PackageManager.DONT_KILL_APP)
+    } catch (e: Exception) {
+        android.util.Log.e("AdminPanel", "Failed to toggle HOME alias", e)
+    }
+}
+
+private fun launchHomePicker(context: android.content.Context) {
+    val intents = listOf(
+        android.content.Intent(android.provider.Settings.ACTION_HOME_SETTINGS),
+        android.content.Intent(android.provider.Settings.ACTION_SETTINGS)
+    )
+    for (intent in intents) {
+        try {
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+            return
+        } catch (e: Exception) { /* try next */ }
+    }
 }

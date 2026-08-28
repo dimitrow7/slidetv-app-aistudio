@@ -11,6 +11,26 @@ Tracks changes to the Android player app (`eu.slidetv.player`).
 
 ## [Unreleased]
 
+### Added
+- **Settings now adapt to the device (TV / box / phone-tablet).** A one-time
+  device-type choice at first launch (pre-filled from a leanback / UI-mode
+  heuristic, since a TV panel and an HDMI box can't be told apart reliably)
+  drives which options show. On a TV or box the meaningless battery-optimisation
+  row and the "keep on charger" tip are hidden, and the OEM-autostart row is
+  replaced by **"Make default launcher"** — on a TV there is no per-app
+  autostart, so being the HOME app is the autostart. A disabled-by-default HOME
+  `activity-alias` is enabled at runtime only when the user opts in, so phones
+  never see the app as a launcher; the system Home-app picker then sets it
+  default (fully setting it from code needs ADB/privilege).
+
+### Changed
+- **Honest power guidance per device class.** A built-in TV panel cannot be
+  truly powered off by an app (that needs privileged HDMI-CEC), so the schedule
+  only blanks the screen there — the panel is told to use the TV's own timer or
+  a CEC box. For a box, the guidance is to enable the box's HDMI-CEC (One-key
+  power) and a short screen-off timeout, so the box's own standby pulls the TV
+  down with it. No new runtime permissions; no direct CEC from the app.
+
 ### Fixed
 - **The poll loop no longer dies when the token cookie disappears.** The native
   shell polls the SaaS using the web player's `slidetv_device_token` cookie, but
